@@ -1,5 +1,5 @@
 class Tape:
-    def __init__(self):
+    def __init__(self) -> None:
         self._data = [0]
         self._ptr = 0
 
