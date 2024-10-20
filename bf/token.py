@@ -17,25 +17,16 @@ class Token(Enum):
         from_char(cls, c: str) -> Self | None
         """
         assert isinstance(c, str) and len(c) == 1
-        match c:
-            case "+":
-                return cls.INCREMENT  # type: ignore
-            case "-":
-                return cls.DECREMENT  # type: ignore
-            case ">":
-                return cls.ADVANCE  # type: ignore
-            case "<":
-                return cls.DEVANCE  # type: ignore
-            case ".":
-                return cls.WRITE  # type: ignore
-            case ",":
-                return cls.READ  # type: ignore
-            case "[":
-                return cls.LOOP_BEGIN  # type: ignore
-            case "]":
-                return cls.LOOP_END  # type: ignore
-            case _:
-                return None
+        return {
+            "+": cls.INCREMENT,
+            "-": cls.DECREMENT,
+            ">": cls.ADVANCE,
+            "<": cls.DEVANCE,
+            ".": cls.WRITE,
+            ",": cls.READ,
+            "[": cls.LOOP_BEGIN,
+            "]": cls.LOOP_END,
+        }.get(c, None)
 
     @classmethod
     def from_byte(cls, b):
