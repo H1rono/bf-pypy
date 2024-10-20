@@ -34,7 +34,7 @@ Program.loop[Program.token(+), Program.token(+), Program.token(+), Program.token
 
 from argparse import ArgumentParser
 
-from . import token, program
+from . import token, tokenize, program
 from .program import Program
 from .tokenize import Tokenize
 
@@ -76,15 +76,15 @@ def set_parse_args(parser):
     """
     set_parse_args(parser: ArgumentParser) -> None
     """
-    Tokenize.set_args(parser)
+    tokenize.set_args(parser)
 
 
 def main():
     parser = ArgumentParser("parse")
-    Tokenize.set_args(parser)
+    tokenize.set_args(parser)
     args = parser.parse_args()
     parser = Parser()
-    with Tokenize.acquire_from_args(args) as t:
+    with tokenize.acquire_from_args(args) as t:
         program = list(parser.parse(t))
     for e in program:
         print e

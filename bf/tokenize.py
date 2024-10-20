@@ -47,35 +47,36 @@ class Tokenize(object):
             self._current_line = rest
         return t
 
-    @staticmethod
-    def set_args(parser):
-        """
-        set_args(parser: ArgumentParser) -> None
-        """
-        assert isinstance(parser, ArgumentParser)
-        parser.add_argument("--program", nargs="?", help="bf program to tokenize; stdin by default")
 
-    @classmethod
+def set_args(parser):
+    """
+    set_args(parser: ArgumentParser) -> None
+    """
+    assert isinstance(parser, ArgumentParser)
+    parser.add_argument("--program", nargs="?", help="bf program to tokenize; stdin by default")
+
+
+@contextmanager
+def acquire_from_args(args):
+    """
     @contextmanager
-    def acquire_from_args(cls, args):
-        """
-        acquire_from_args(cls, args) -> Tokenize
-        """
-        assert hasattr(args, "program")
-        program = args.program
-        assert program is None or isinstance(program, str)
-        try:
-            program = open(program, mode="r") if program is not None else sys.stdin
-            yield cls(program)
-        finally:
-            program.close()
+    acquire_from_args(args) -> Tokenize
+    """
+    assert hasattr(args, "program")
+    program = args.program
+    assert program is None or isinstance(program, str)
+    try:
+        program = open(program, mode="r") if program is not None else sys.stdin
+        yield cls(program)
+    finally:
+        program.close()
 
 
 def main():
     parser = ArgumentParser("tokenize")
-    Tokenize.set_args(parser)
+    tokenize.set_args(parser)
     args = parser.parse_args()
-    with Tokenize.acquire_from_args(args) as tokenize:
+    with tokenize.acquire_from_args(args) as tokenize:
         result = list(iter(tokenize))
     print result
 
