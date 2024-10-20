@@ -1,9 +1,7 @@
-from distutils import sysconfig
+import site
 
 from setuptools import setup
 
-
-site_packages_path = sysconfig.get_python_lib()
 
 setup(
     name="bf",
@@ -14,5 +12,5 @@ setup(
     extras_require={
         "dev": [],
     },
-    data_files=[]
+    data_files=[(site.USER_SITE, "pypy.pth")]
 )
