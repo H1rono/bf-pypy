@@ -37,6 +37,12 @@ class Program(object):
         self._loop = loop
 
     def __str__(self):
+        return self.to_str()
+
+    def to_str(self):
+        """
+        to_str(self) -> str
+        """
         if self._kind == Program.KIND_TOKEN:
             assert self._token is not None
             return "Program.token(%s)" % str(self._token)
