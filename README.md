@@ -4,16 +4,9 @@ https://pypy.org/posts/2011/04/tutorial-writing-interpreter-with-pypy-3785910476
 
 ## Development
 
-requires: PyPy @ v7.3.17
+requires: [DevContainer](https://code.visualstudio.com/docs/devcontainers/containers)
 
 ```bash
-# create venv
-pypy -m venv .venv
-# activate venv
-source .venv/bin/activate
-# install [dev-]dependencies and build
+# within devcontainer:
 pip install -e '.[dev]'
-# checks
-mypy bf
-ruff check
 ```
