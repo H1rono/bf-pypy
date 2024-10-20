@@ -36,6 +36,7 @@ from argparse import ArgumentParser
 
 from . import token, tokenize, program
 from .program import Program
+from .token import Token
 from .tokenize import Tokenize
 
 
@@ -43,33 +44,54 @@ class Parser(object):
     def __init__(self):
         pass
 
-    def _parse_loop(self, it):
-        """
-        _parse_loop(self, it: Iterator<Item=Token>) -> Generator<Item=Program>
-        """
-        for t in it:
-            if t not in [token.LOOP_BEGIN, token.LOOP_END]:
-                yield program.token(t)
-                continue
-            if t == token.LOOP_END:
-                return
-            # t == token.LOOP_BEGIN
-            yield program.loop(self._parse_loop(it))
-
     def parse(self, tokenize):
         """
-        parse(self, tokenize: Tokenize) -> Generator<Item=Program>
+        parse(self, tokenize: Tokenize) -> Parsed
         """
+        return Parsed(self, tokenize)
+
+
+class Parsed(object):
+    def __init__(self, parser, tokenize, until=None):
+        """
+        __init__(self, parser: Parser, tokenize: Tokenize, until: Token | None = None)
+        """
+        assert isinstance(parser, Parser)
         assert isinstance(tokenize, Tokenize)
-        it = tokenize
-        for t in it:
-            if t not in [token.LOOP_BEGIN, token.LOOP_END]:
-                yield program.token(t)
-                continue
-            if t == token.LOOP_END:
-                raise ValueError("unexpected end-of-loop")
-            assert t == token.LOOP_BEGIN
-            yield program.loop(self._parse_loop(it))
+        assert until is None or isinstance(until, Token)
+        self._parser = parser
+        self._tokenize = tokenize
+        self._until = until
+        # self._inner: Parsed | None
+        self._inner = None
+
+    def __iter__(self):
+        """
+        __iter__(self) -> Self
+        # Self: Iterator<Item=Program>
+        """
+        return self
+
+    def _nest_loop(self):
+        """
+        nest_loop(self) -> Self
+        """
+        return Parsed(
+            self._parser,
+            self._tokenize,
+            token.LOOP_END,
+        )
+
+    def next(self):
+        t = self._tokenize.next()
+        assert isinstance(t, Token)
+        if isinstance(self._until, Token) and t == self._until:
+            raise StopIteration()
+        if t == token.LOOP_BEGIN:
+            loop = program.loop(self._nest_loop())
+            return loop
+        assert t not in [token.LOOP_BEGIN, token.LOOP_END]
+        return program.token(t)
 
 
 def set_parse_args(parser):
