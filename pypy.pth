@@ -1,3 +1,4 @@
 # This file is only available within devcontainer
 
+/workspaces/bf-pypy
 /workspaces/bf-pypy/pypy
