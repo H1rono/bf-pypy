@@ -62,7 +62,7 @@ class Tape(object):
         self._ptr += diff
         ext = self._ptr - len(self._data)
         if ext < 0:
-            return None
+            return
         self._data += [0] * (ext + 1)
 
     def devance_by(self, diff):
