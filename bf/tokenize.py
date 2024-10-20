@@ -18,18 +18,32 @@ class Tokenize(object):
         """
         __init__(self, program: Iterator<Item=str>) -> None
         """
-        self._program = iter(program)
+        self._program = program
+        # self._current_line: str | None
+        self._current_line = None
 
     def __iter__(self):
         """
-        __iter__(self) -> Generator<Item=Token>
+        __iter__(self) -> Self
+        # Self: Generator<Item=Token>
         """
-        for line in self._program:
-            assert isinstance(line, str)
-            tokens = (Token.from_char(c) for c in line)
-            tokens = filter(None, tokens)
-            for t in tokens:
-                yield t
+        return self
+
+    def next(self):
+        """
+        next(self) -> Token
+        throws StopIteration
+        """
+        # token: Token | None
+        token = None
+        while token is None and not isinstance(token, Token):
+            if self._current_line is None or len(self._current_line) == 0:
+                self._current_line = self._program.next()
+            head = self._current_line[0]
+            rest = self._current_line[1:]
+            token = Token.from_char(head)
+            self._current_line = rest
+        return token
 
     @staticmethod
     def set_args(parser):
