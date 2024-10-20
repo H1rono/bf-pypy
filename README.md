@@ -8,5 +8,6 @@ requires: [DevContainer](https://code.visualstudio.com/docs/devcontainers/contai
 
 ```bash
 # within devcontainer:
+cp ./pypy.pth "$(pypy -c 'import site; print site.USER_SITE')/pypy.pth"
 pip install -e '.[dev]'
 ```

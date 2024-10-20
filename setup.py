@@ -1,5 +1,3 @@
-import site
-
 from setuptools import setup
 
 
@@ -12,5 +10,4 @@ setup(
     extras_require={
         "dev": [],
     },
-    data_files=[(site.USER_SITE, "pypy.pth")]
 )
