@@ -51,7 +51,7 @@ class _TokenMeta(type):
 
 
 class Token(object):
-    # __metaclass__ = _TokenMeta
+    __metaclass__ = _TokenMeta
 
     def __init__(self):
         return NotImplemented
