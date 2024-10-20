@@ -67,7 +67,7 @@ def acquire_from_args(args):
     assert program is None or isinstance(program, str)
     try:
         program = open(program, mode="r") if program is not None else sys.stdin
-        yield cls(program)
+        yield Tokenize(program)
     finally:
         program.close()
 
