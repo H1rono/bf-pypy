@@ -27,7 +27,7 @@ class TokenMeta(type):
         ]
 
 
-class Token:
+class Token(object):
     __metaclass__ = TokenMeta
 
     def __init__(self):

@@ -1,4 +1,4 @@
-class Tape:
+class Tape(object):
     def __init__(self):
         self._data = [0]
         self._ptr = 0

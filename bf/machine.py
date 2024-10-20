@@ -3,7 +3,7 @@ from io import RawIOBase
 from .tape import Tape
 
 
-class Machine:
+class Machine(object):
     def __init__(self, stdin, stdout):
         """
         __init__(self, stdin: RawIOBase, stdout: RawIOBase) -> None
