@@ -11,32 +11,37 @@ Program.loop[Program.token(+)]
 ```
 """
 
-from .token import Token
+from .token import Token, is_token
 
 
 class Program(object):
     KIND_TOKEN = "PROGRAM_TOKEN"
     KIND_LOOP = "PROGRAM_LOOP"
 
-    def __init__(self, kind, value):
+    def __init__(self, kind, token, loop):
         """
-        __init__(self, kind: 'Self.Kind', value: Token | list[Self])
+        __init__(self, kind: 'Self.Kind', token: Token | None, loop: list[Self] | None)
         """
         assert kind == Program.KIND_TOKEN or kind == Program.KIND_LOOP
         self._kind = kind
+        # self._token: Token | None
+        self._token = token
+        # self._loop: list[Self] | None
+        self._loop = loop
         if kind == Program.KIND_TOKEN:
-            assert isinstance(value, Token)
-            self._value = value
+            assert is_token(token) and loop is None
             return
         # kind == Program.KIND_LOOP
-        assert isinstance(value, list)
-        _assert_all_program(value)
-        self._value = value
+        assert isinstance(loop, list) and token is None
+        _assert_all_program(loop)
+        self._loop = loop
 
     def __str__(self):
         if self._kind == Program.KIND_TOKEN:
-            return "Program.token(%s)" % str(self._value)
-        loop = ", ".join(str(p) for p in self._value)
+            assert self._token is not None
+            return "Program.token(%s)" % str(self._token)
+        assert self._loop is not None
+        loop = ", ".join(str(p) for p in self._loop)
         return "Program.loop[%s]" % loop
 
     @property
@@ -47,11 +52,18 @@ class Program(object):
         return self._kind
 
     @property
-    def value(self):
+    def token(self):
         """
-        value(self) -> Token | list[Self]
+        token(self) -> Token | None
         """
-        return self._value
+        return self._token
+
+    @property
+    def loop(self):
+        """
+        loop(self) -> list[Self] | None
+        """
+        return self._loop
 
 
 def _assert_all_program(it):
@@ -66,8 +78,8 @@ def token(value):
     """
     token(value: Token) -> Program
     """
-    assert isinstance(value, Token)
-    return Program(Program.KIND_TOKEN, value)
+    assert is_token(value)
+    return Program(Program.KIND_TOKEN, value, None)
 
 
 def loop(value):
@@ -76,4 +88,4 @@ def loop(value):
     """
     value = [v for v in value]
     _assert_all_program(value)
-    return Program(Program.KIND_LOOP, value)
+    return Program(Program.KIND_LOOP, None, value)
