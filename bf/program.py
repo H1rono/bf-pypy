@@ -46,8 +46,12 @@ class Program(object):
         if self._kind == Program.KIND_TOKEN:
             assert self._token is not None
             return "Program.token(%s)" % str(self._token)
-        assert self._loop is not None
-        loop = ", ".join(str(p) for p in self._loop)
+        assert self._kind == Program.KIND_LOOP and self._loop is not None
+        loop_len = len(self._loop)
+        loop = ""
+        for i, p in enumerate(self._loop):
+            p_str = p.to_str()
+            loop += "%s, " % p_str if i < loop_len - 1 else p_str
         return "Program.loop[%s]" % loop
 
     @property
