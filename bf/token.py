@@ -1,3 +1,26 @@
+"""
+```python
+>>>> from bf import token
+>>>> from bf.token import Token
+>>>> Token.from_char("+")
+'+'
+>>>> Token.from_char(" ")
+>>>> Token.from_char("")
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "bf/token.py", line 41, in from_char
+    assert isinstance(c, str) and len(c) == 1
+AssertionError
+>>>> Token.from_char("-")
+'-'
+>>>> ord("+")
+43
+>>>> Token.from_byte(43)
+'+'
+```
+"""
+
+
 INCREMENT = "+"
 DECREMENT = "-"
 ADVANCE = ">"

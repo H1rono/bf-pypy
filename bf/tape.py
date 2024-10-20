@@ -1,3 +1,27 @@
+"""
+```python
+>>>> from bf.tape import Tape
+>>>> t = Tape()
+>>>> print(t)
+Tape[@0]
+>>>> t.value += 10
+>>>> print(t)
+Tape[@10]
+>>>> t.value
+10
+>>>> t.advance_by(3)
+>>>> t.value
+0
+>>>> t.verify()
+True
+>>>> t.value -= 5
+>>>> t.verify()
+False
+>>>> print(t)
+Tape[10, 0, 0, @-5]
+```
+"""
+
 class Tape(object):
     def __init__(self):
         self._data = [0]
