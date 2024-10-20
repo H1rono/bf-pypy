@@ -38,7 +38,9 @@ class Tokenize(object):
         t = None
         while t is None and not isinstance(t, Token):
             if self._current_line is None or len(self._current_line) == 0:
-                self._current_line = self._program.next()
+                self._current_line = self._program.readline()
+            if len(self._current_line) == 0:
+                raise StopIteration()
             head = self._current_line[0]
             rest = self._current_line[1:]
             t = token.from_char(head)
