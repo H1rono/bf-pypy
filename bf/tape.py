@@ -4,9 +4,9 @@ class Tape:
         self._ptr = 0
 
     def __str__(self) -> str:
-        data_str = (f"@{v}" if i == self._ptr else f"{v}" for i, v in enumerate(self._data))
+        data_str = ("@%d" % v if i == self._ptr else str(v) for i, v in enumerate(self._data))
         data = ", ".join(data_str)
-        return f"Tape[{data}]"
+        return "Tape[%s]" % data
 
     def verify(self) -> bool:
         data_verify = (0 <= v < 256 for v in self._data)

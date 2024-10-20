@@ -18,7 +18,7 @@ class Machine:
     def read(self) -> None:
         b = self._stdin.read(1)
         if b is None:
-            raise RuntimeError(f"Reached to EOF while reading stdin {self._stdin}")
+            raise RuntimeError("Reached to EOF while reading stdin %s" % str(self._stdin))
         self._tape.value = b[0]
 
     def write(self) -> None:
