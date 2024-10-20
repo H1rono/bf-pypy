@@ -34,7 +34,7 @@ Program.loop[Program.token(+), Program.token(+), Program.token(+), Program.token
 
 from argparse import ArgumentParser
 
-from . import token
+from . import token, program
 from .program import Program
 from .tokenize import Tokenize
 
@@ -49,27 +49,27 @@ class Parser(object):
         """
         for t in it:
             if t not in [token.LOOP_BEGIN, token.LOOP_END]:
-                yield Program.token(t)
+                yield program.new_token(t)
                 continue
             if t == token.LOOP_END:
                 return
             # t == token.LOOP_BEGIN
-            yield Program.loop(self._parse_loop(it))
+            yield program.new_loop(self._parse_loop(it))
 
     def parse(self, tokenize):
         """
         parse(self, tokenize: Tokenize) -> Generator<Item=Program>
         """
         assert isinstance(tokenize, Tokenize)
-        it = iter(tokenize)
+        it = tokenize
         for t in it:
             if t not in [token.LOOP_BEGIN, token.LOOP_END]:
-                yield Program.token(t)
+                yield program.new_token(t)
                 continue
             if t == token.LOOP_END:
                 raise ValueError("unexpected end-of-loop")
             assert t == token.LOOP_BEGIN
-            yield Program.loop(self._parse_loop(it))
+            yield program.new_loop(self._parse_loop(it))
 
 
 def set_parse_args(parser):

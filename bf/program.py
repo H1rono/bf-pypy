@@ -29,7 +29,8 @@ class Program(object):
             self._value = value
             return
         # kind == Program.KIND_LOOP
-        assert isinstance(value, list) and all(isinstance(v, Program) for v in value)
+        assert isinstance(value, list)
+        _assert_all_program(value)
         self._value = value
 
     def __str__(self):
@@ -52,19 +53,27 @@ class Program(object):
         """
         return self._value
 
-    @classmethod
-    def token(cls, value):
-        """
-        token(cls, value: Token) -> Self
-        """
-        assert isinstance(value, Token)
-        return cls(cls.KIND_TOKEN, value)
 
-    @classmethod
-    def loop(cls, value):
-        """
-        token(cls, value: Iterator<Item=Program>) -> Self
-        """
-        value = list(value)
-        assert all(isinstance(v, cls) for v in value)
-        return cls(cls.KIND_LOOP, value)
+def _assert_all_program(it):
+    """
+    _assert_all_program(it: Iterator<Item=(Maybe) Program>)
+    """
+    for v in it:
+        assert isinstance(v, Program)
+
+
+def new_token(value):
+    """
+    new_token(value: Token) -> Program
+    """
+    assert isinstance(value, Token)
+    return Program(Program.KIND_TOKEN, value)
+
+
+def new_loop(value):
+    """
+    new_loop(value: Iterator<Item=Program>) -> Program
+    """
+    value = [v for v in value]
+    _assert_all_program(value)
+    return Program(Program.KIND_LOOP, value)
