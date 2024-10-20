@@ -20,7 +20,7 @@ class Tokenize(object):
         """
         self._program = program
         # self._current_line: str | None
-        self._current_line = None
+        self._current_line = ''
 
     def __iter__(self):
         """
@@ -34,16 +34,16 @@ class Tokenize(object):
         next(self) -> Token
         throws StopIteration
         """
-        # token: Token | None
-        token = None
-        while token is None and not isinstance(token, Token):
+        # t: Token | None
+        t = None
+        while t is None and not isinstance(t, Token):
             if self._current_line is None or len(self._current_line) == 0:
                 self._current_line = self._program.next()
             head = self._current_line[0]
             rest = self._current_line[1:]
-            token = Token.from_char(head)
+            t = token.from_char(head)
             self._current_line = rest
-        return token
+        return t
 
     @staticmethod
     def set_args(parser):

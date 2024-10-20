@@ -2,20 +2,20 @@
 ```python
 >>>> from bf import token
 >>>> from bf.token import Token
->>>> Token.from_char("+")
+>>>> token.from_char("+")
 '+'
->>>> Token.from_char(" ")
->>>> Token.from_char("")
+>>>> token.from_char(" ")
+>>>> token.from_char("")
 Traceback (most recent call last):
   File "<stdin>", line 1, in <module>
   File "bf/token.py", line 41, in from_char
     assert isinstance(c, str) and len(c) == 1
 AssertionError
->>>> Token.from_char("-")
+>>>> token.from_char("-")
 '-'
 >>>> ord("+")
 43
->>>> Token.from_byte(43)
+>>>> token.from_byte(43)
 '+'
 ```
 """
@@ -31,7 +31,7 @@ LOOP_BEGIN = "["
 LOOP_END = "]"
 
 
-class TokenMeta(type):
+class _TokenMeta(type):
     def __instancecheck__(self, other):
         """
         __instancecheck(self, other: type) -> bool
@@ -51,32 +51,33 @@ class TokenMeta(type):
 
 
 class Token(object):
-    __metaclass__ = TokenMeta
+    # __metaclass__ = _TokenMeta
 
     def __init__(self):
         return NotImplemented
 
-    @classmethod
-    def from_char(cls, c):
-        """
-        from_char(cls, c: str) -> Self | None
-        """
-        assert isinstance(c, str) and len(c) == 1
-        return {
-            "+": INCREMENT,
-            "-": DECREMENT,
-            ">": ADVANCE,
-            "<": DEVANCE,
-            ".": WRITE,
-            ",": READ,
-            "[": LOOP_BEGIN,
-            "]": LOOP_END,
-        }.get(c, None)
 
-    @classmethod
-    def from_byte(cls, b):
-        """
-        from_byte(cls, b: int) -> Self | None
-        """
-        assert isinstance(b, int) and 0 <= b < 256
-        return cls.from_char(chr(b))
+def from_char(c):
+    """
+    from_char(c: str) -> Token | None
+    """
+    assert isinstance(c, str) and len(c) == 1
+    return {
+        "+": INCREMENT,
+        "-": DECREMENT,
+        ">": ADVANCE,
+        "<": DEVANCE,
+        ".": WRITE,
+        ",": READ,
+        "[": LOOP_BEGIN,
+        "]": LOOP_END,
+    }.get(c, None)
+
+
+
+def from_byte(b):
+    """
+    from_byte(b: int) -> Token | None
+    """
+    # assert isinstance(b, int) and 0 <= b < 256
+    return from_char(chr(b))
