@@ -62,17 +62,17 @@ def _assert_all_program(it):
         assert isinstance(v, Program)
 
 
-def new_token(value):
+def token(value):
     """
-    new_token(value: Token) -> Program
+    token(value: Token) -> Program
     """
     assert isinstance(value, Token)
     return Program(Program.KIND_TOKEN, value)
 
 
-def new_loop(value):
+def loop(value):
     """
-    new_loop(value: Iterator<Item=Program>) -> Program
+    loop(value: Iterator<Item=Program>) -> Program
     """
     value = [v for v in value]
     _assert_all_program(value)

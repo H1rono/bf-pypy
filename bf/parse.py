@@ -49,12 +49,12 @@ class Parser(object):
         """
         for t in it:
             if t not in [token.LOOP_BEGIN, token.LOOP_END]:
-                yield program.new_token(t)
+                yield program.token(t)
                 continue
             if t == token.LOOP_END:
                 return
             # t == token.LOOP_BEGIN
-            yield program.new_loop(self._parse_loop(it))
+            yield program.loop(self._parse_loop(it))
 
     def parse(self, tokenize):
         """
@@ -64,12 +64,12 @@ class Parser(object):
         it = tokenize
         for t in it:
             if t not in [token.LOOP_BEGIN, token.LOOP_END]:
-                yield program.new_token(t)
+                yield program.token(t)
                 continue
             if t == token.LOOP_END:
                 raise ValueError("unexpected end-of-loop")
             assert t == token.LOOP_BEGIN
-            yield program.new_loop(self._parse_loop(it))
+            yield program.loop(self._parse_loop(it))
 
 
 def set_parse_args(parser):
