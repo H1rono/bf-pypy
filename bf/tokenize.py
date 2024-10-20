@@ -36,7 +36,7 @@ class Tokenize(object):
         """
         # t: Token | None
         t = None
-        while t is None and not isinstance(t, Token):
+        while t is None and not token.is_token(t):
             if self._current_line is None or len(self._current_line) == 0:
                 self._current_line = self._program.readline(100)
             if len(self._current_line) == 0:
