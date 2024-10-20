@@ -1,15 +1,37 @@
-from enum import Enum
+INCREMENT = "+"
+DECREMENT = "-"
+ADVANCE = ">"
+DEVANCE = "<"
+WRITE = "."
+READ = ","
+LOOP_BEGIN = "["
+LOOP_END = "]"
 
 
-class Token(Enum):
-    INCREMENT = "+"
-    DECREMENT = "-"
-    ADVANCE = ">"
-    DEVANCE = "<"
-    WRITE = "."
-    READ = ","
-    LOOP_BEGIN = "["
-    LOOP_END = "]"
+class TokenMeta(type):
+    def __instancecheck__(self, other):
+        """
+        __instancecheck(self, other: type) -> bool
+        """
+        return other in self.members()
+
+    def members(self):
+        """
+        members(self) -> list[Token]
+        """
+        return [
+            INCREMENT, DECREMENT,
+            ADVANCE, DEVANCE,
+            WRITE, READ,
+            LOOP_BEGIN, LOOP_END
+        ]
+
+
+class Token:
+    __metaclass__ = TokenMeta
+
+    def __init__(self):
+        return NotImplemented
 
     @classmethod
     def from_char(cls, c):
@@ -18,14 +40,14 @@ class Token(Enum):
         """
         assert isinstance(c, str) and len(c) == 1
         return {
-            "+": cls.INCREMENT,
-            "-": cls.DECREMENT,
-            ">": cls.ADVANCE,
-            "<": cls.DEVANCE,
-            ".": cls.WRITE,
-            ",": cls.READ,
-            "[": cls.LOOP_BEGIN,
-            "]": cls.LOOP_END,
+            "+": INCREMENT,
+            "-": DECREMENT,
+            ">": ADVANCE,
+            "<": DEVANCE,
+            ".": WRITE,
+            ",": READ,
+            "[": LOOP_BEGIN,
+            "]": LOOP_END,
         }.get(c, None)
 
     @classmethod
