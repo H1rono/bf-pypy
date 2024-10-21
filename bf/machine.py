@@ -35,5 +35,5 @@ class Machine(object):
         write(self) -> None
         write 1byte from tape, to stdout
         """
-        buf = bytes([self._tape.value])
+        buf = bytearray([self._tape.value])
         self._stdout.write(buf)
