@@ -74,9 +74,9 @@ def acquire_from_args(args):
 
 def main():
     parser = ArgumentParser("tokenize")
-    tokenize.set_args(parser)
+    set_args(parser)
     args = parser.parse_args()
-    with tokenize.acquire_from_args(args) as tokenize:
+    with acquire_from_args(args) as tokenize:
         result = list(iter(tokenize))
     print result
 
