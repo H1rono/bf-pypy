@@ -1,15 +1,13 @@
-from io import RawIOBase
-
 from .tape import Tape
 
 
 class Machine(object):
     def __init__(self, stdin, stdout):
         """
-        __init__(self, stdin: RawIOBase, stdout: RawIOBase) -> None
+        __init__(self, stdin: File, stdout: File) -> None
         """
-        assert isinstance(stdin, RawIOBase) and stdin.readable()
-        assert isinstance(stdout, RawIOBase) and stdout.writable()
+        assert hasattr(stdin, "read")
+        assert hasattr(stdout, "write")
         self._tape = Tape()
         self._stdin = stdin
         self._stdout = stdout
