@@ -6,10 +6,12 @@ class Machine(object):
         """
         __init__(self, stdin: File, stdout: File) -> None
         """
-        assert hasattr(stdin, "read")
-        assert hasattr(stdout, "write")
+        # TODO: add some assertion
+        # assert hasattr(stdin, "read")
+        # assert hasattr(stdout, "write")
         self._tape = Tape()
         self._stdin = stdin
+        self._stdin_line = ""
         self._stdout = stdout
 
     @property
@@ -25,15 +27,19 @@ class Machine(object):
 
         read 1byte from stdin, store to tape
         """
-        b = self._stdin.read(1)
-        if b is None:
+        if len(self._stdin_line) == 0:
+            self._stdin_line = self._stdin.readline(100)
+        if len(self._stdin_line) == 0:
             raise RuntimeError("Reached to EOF while reading stdin %s" % str(self._stdin))
-        self._tape.value = b[0]
+        head = self._stdin_line[0]
+        tail = self._stdin_line[1:]
+        self._stdin_line = tail
+        self._tape.value = ord(head)
 
     def write(self):
         """
         write(self) -> None
         write 1byte from tape, to stdout
         """
-        buf = bytearray([self._tape.value])
+        buf = chr(self._tape.value)
         self._stdout.write(buf)
