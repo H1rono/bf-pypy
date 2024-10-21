@@ -8,6 +8,101 @@ from .program import Program
 from .token import is_token
 
 
+class LoopContext(object):
+    def __init__(self, machine, loop):
+        """
+        __init__(self, machine: Machine, program: Program.loop)
+        """
+        assert isinstance(machine, Machine)
+        assert isinstance(loop, Program) and loop.kind == Program.KIND_LOOP
+        assert loop.loop is not None
+        self._machine = machine
+        # self._loop: list[Program]
+        self._loop = loop.loop
+        self._current_index = 0
+        # self._current_loop = LoopContext | None
+        self._current_loop = None
+
+    def __iter__(self):
+        """
+        __iter__(self) -> Self
+        # Self: Iterator<Item=Machine>
+        """
+        return self
+
+    def _inc_index(self):
+        """
+        _inc_index(self) -> None
+        """
+        self._current_index += 1
+        self._current_index %= len(self._loop)
+
+    def next(self):
+        """
+        next(self) -> Machine
+        """
+        if self._current_loop is not None:
+            assert isinstance(self._current_loop, LoopContext)
+            try:
+                m = self._current_loop.next()
+            except StopIteration:
+                self._current_loop = None
+                self._inc_index()
+                return self._machine
+            else:
+                return m
+        l = len(self._loop)
+        if self._current_index == 0 and self._machine.tape.value == 0:
+            raise StopIteration()
+        program = self._loop[self._current_index]
+        if program.kind == Program.KIND_TOKEN:
+            run_token(self._machine, program)
+            self._inc_index()
+            return self._machine
+        assert program.kind == Program.KIND_LOOP
+        self._current_loop = LoopContext(self._machine, program)
+        return self._machine
+
+
+class Context(object):
+    def __init__(self, machine, program):
+        """
+        __init__(self, machine: Machine, program: Parsed)
+        """
+        assert isinstance(machine, Machine)
+        assert isinstance(program, Parsed)
+        self._machine = machine
+        # self._program: Parsed
+        self._program = program
+        # self._current_loop: LoopContext | None
+        self._current_loop = None
+
+    def __iter__(self):
+        """
+        __iter__(self) -> Self
+        # Self: Iterator<Item=Machine>
+        """
+        return self
+
+    def next(self):
+        if self._current_loop is not None:
+            assert isinstance(self._current_loop, LoopContext)
+            try:
+                m = self._current_loop.next()
+            except StopIteration:
+                self._current_loop = None
+                return self._machine
+            else:
+                return m
+        program = self._program.next()
+        if program.kind == Program.KIND_TOKEN:
+            run_token(self._machine, program)
+            return self._machine
+        assert program.kind == Program.KIND_LOOP
+        self._current_loop = LoopContext(self._machine, program)
+        return self._machine
+
+
 def run_token(machine, token):
     """
     run_token(machine: Machine, token: Program.token) -> None
@@ -33,33 +128,14 @@ def run_token(machine, token):
         machine.read()
 
 
-def run_loop(machine, loop):
-    """
-    run_loop(machine: Machine, loop: Program.loop) -> None
-    """
-    assert isinstance(machine, Machine)
-    assert isinstance(loop, Program) and loop.kind == Program.KIND_LOOP
-    loop_inner = loop.loop
-    while machine.tape.value != 0:
-        for p in loop_inner:
-            if p.kind == Program.KIND_TOKEN:
-                run_token(machine, p)
-                continue
-            assert p.kind == Program.KIND_LOOP
-            run_loop(machine, p)
-
-
 def run(program, stdin, stdout):
     """
     run(program: Parsed, stdin: File, stdout: File) -> None
     """
     machine = Machine(stdin, stdout)
-    for p in program:
-        if p.kind == Program.KIND_TOKEN:
-            run_token(machine, p)
-            continue
-        assert p.kind == Program.KIND_LOOP
-        run_loop(machine, p)
+    ctx = Context(machine, program)
+    for _ in ctx:
+        pass
 
 
 def set_args(parser):
