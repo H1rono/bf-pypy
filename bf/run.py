@@ -40,15 +40,13 @@ def run_loop(machine, loop):
     assert isinstance(machine, Machine)
     assert isinstance(loop, Program) and loop.kind == Program.KIND_LOOP
     loop_inner = loop.loop
-    while True:
+    while machine.tape.value != 0:
         for p in loop_inner:
             if p.kind == Program.KIND_TOKEN:
                 run_token(machine, p)
                 continue
             assert p.kind == Program.KIND_LOOP
             run_loop(machine, p)
-        if machine.tape.value == 0:
-            break
 
 
 def run(program, stdin, stdout):
@@ -57,7 +55,6 @@ def run(program, stdin, stdout):
     """
     machine = Machine(stdin, stdout)
     for p in program:
-        # print "run %s" % p.to_str()
         if p.kind == Program.KIND_TOKEN:
             run_token(machine, p)
             continue
