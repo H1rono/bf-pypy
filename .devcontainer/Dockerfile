@@ -4,7 +4,7 @@ FROM pypy:${VARIANT}
 
 RUN apt-get -qq update \
     && export DEBIAN_FRONTEND=noninteractive \
-    apt-get -qq install build-essential graphviz
+    && apt-get -qq install build-essential graphviz
 
 # Temporary: Upgrade python packages due to https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-40897 and https://github.com/advisories/GHSA-2mqj-m65w-jghx
 # They are installed by the base image (python) which does not have the patch.
