@@ -18,6 +18,13 @@
     },
     // Configure tool-specific properties.
     "customizations": {
+        "jetbrains": {
+            "settings": {
+                "com.intellij:app:EditorSettings.is_ensure_newline_at_eof": true,
+                "com.intellij:app:EditorSettings.remove_trailing_blank_lines": true,
+                "Git4Idea:app:Git-Application-Settings.use_credential_helper": true
+            }
+        },
         // Configure properties specific to VS Code.
         "vscode": {
             // Set *default* container specific settings.json values on container create.
