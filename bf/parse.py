@@ -35,8 +35,6 @@ Program.loop[Program.token(+), Program.token(+), Program.token(+), Program.token
 from argparse import ArgumentParser
 
 from . import token, tokenize, program
-from .program import Program
-from .token import Token
 from .tokenize import Tokenize
 
 
@@ -93,6 +91,12 @@ class Parsed(object):
         assert t not in [token.LOOP_BEGIN, token.LOOP_END]
         return program.token(t)
 
+    def collect(self):
+        """
+        collect(self) -> list[Program]
+        """
+        return [p for p in self]
+
 
 def set_parse_args(parser):
     """
@@ -107,7 +111,7 @@ def main():
     args = parser.parse_args()
     parser = Parser()
     with tokenize.acquire_from_args(args) as t:
-        program = list(parser.parse(t))
+        program = parser.parse(t).collect()
     for e in program:
         print e
 
