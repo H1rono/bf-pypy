@@ -36,7 +36,7 @@ def run_token(machine, token):
         machine.read()
 
 
-_jit_driver = JitDriver(greens=["i", "is_loop", "program"], reds=["machine"], is_recursive=True)
+_jit_driver = JitDriver(greens=["i", "is_loop", "p", "program"], reds=["machine"], is_recursive=True)
 
 
 def run_inner(program, machine, is_loop=False):
@@ -45,10 +45,10 @@ def run_inner(program, machine, is_loop=False):
     """
     i = 0
     while i < len(program):
-        _jit_driver.jit_merge_point(i=i, is_loop=is_loop, program=program, machine=machine)
         if is_loop and i == 0 and machine.tape.value() == 0:
             return
         p = program[i]
+        _jit_driver.jit_merge_point(i=i, is_loop=is_loop, p=p, program=program, machine=machine)
         if p.kind == Program.KIND_TOKEN:
             run_token(machine, p)
             i += 1
