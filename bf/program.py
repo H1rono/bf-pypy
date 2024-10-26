@@ -21,20 +21,21 @@ class Program(object):
     def __init__(self, kind, token, loop):
         """
         __init__(self, kind: 'Self.Kind', token: Token | None, loop: list[Self] | None)
+        kind == KIND_TOKEN => token is not None
+        kind == KIND_LOOP => loop is not None
         """
         assert kind == Program.KIND_TOKEN or kind == Program.KIND_LOOP
-        self._kind = kind
+        self.kind = kind
         # self._token: Token | None
-        self._token = token
+        self.token = token
         # self._loop: list[Self] | None
-        self._loop = loop
+        self.loop = loop
         if kind == Program.KIND_TOKEN:
             assert is_token(token) and loop is None
             return
         # kind == Program.KIND_LOOP
         assert isinstance(loop, list) and token is None
         _assert_all_program(loop)
-        self._loop = loop
 
     def __str__(self):
         return self.to_str()
@@ -43,37 +44,16 @@ class Program(object):
         """
         to_str(self) -> str
         """
-        if self._kind == Program.KIND_TOKEN:
-            assert self._token is not None
-            return "Program.token(%s)" % str(self._token)
-        assert self._kind == Program.KIND_LOOP and self._loop is not None
-        loop_len = len(self._loop)
+        if self.kind == Program.KIND_TOKEN:
+            assert self.token is not None
+            return "Program.token(%s)" % str(self.token)
+        assert self.kind == Program.KIND_LOOP and self.loop is not None
+        loop_len = len(self.loop)
         loop = ""
-        for i, p in enumerate(self._loop):
+        for i, p in enumerate(self.loop):
             p_str = p.to_str()
             loop += "%s, " % p_str if i < loop_len - 1 else p_str
         return "Program.loop[%s]" % loop
-
-    @property
-    def kind(self):
-        """
-        kind(self) -> 'Self.Kind'
-        """
-        return self._kind
-
-    @property
-    def token(self):
-        """
-        token(self) -> Token | None
-        """
-        return self._token
-
-    @property
-    def loop(self):
-        """
-        loop(self) -> list[Self] | None
-        """
-        return self._loop
 
 
 def _assert_all_program(it):
