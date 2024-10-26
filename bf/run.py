@@ -51,8 +51,7 @@ class LoopContext(object):
                 return self._machine
             else:
                 return m
-        l = len(self._loop)
-        if self._current_index == 0 and self._machine.tape.value == 0:
+        if self._current_index == 0 and self._machine.tape.value() == 0:
             raise StopIteration()
         program = self._loop[self._current_index]
         if program.kind == Program.KIND_TOKEN:
@@ -114,10 +113,11 @@ def run_token(machine, token):
     token_inner = token.token
     assert token_inner is not None and is_token(token_inner)
     assert token_inner not in [LOOP_BEGIN, LOOP_END]
+    v = machine.tape.value()
     if token_inner == INCREMENT:
-        machine.tape.value += 1
+        machine.tape.set_value(v + 1)
     elif token_inner == DECREMENT:
-        machine.tape.value -= 1
+        machine.tape.set_value(v - 1)
     elif token_inner == ADVANCE:
         machine.tape.advance_by(1)
     elif token_inner == DEVANCE:

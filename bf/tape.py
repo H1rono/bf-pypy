@@ -22,6 +22,9 @@ Tape[10, 0, 0, @-5]
 ```
 """
 
+from rpython.rlib.objectmodel import try_inline
+
+
 class Tape(object):
     def __init__(self):
         self._data = [0]
@@ -39,15 +42,13 @@ class Tape(object):
         data_verify = (0 <= v < 256 for v in self._data)
         return len(self._data) > self._ptr and all(data_verify)
 
-    @property
     def value(self):
         """
         value(self) -> int
         """
         return self._data[self._ptr]
 
-    @value.setter
-    def value(self, value):
+    def set_value(self, value):
         """
         value(self, value: int) -> None
         """
