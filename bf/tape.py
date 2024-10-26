@@ -52,14 +52,14 @@ class Tape(object):
         """
         value(self, value: int) -> None
         """
-        assert isinstance(value, int)
+        # assert isinstance(value, int)
         self._data[self._ptr] = value
 
     def advance_by(self, diff):
         """
         advance_by(self, diff: int) -> None
         """
-        assert isinstance(diff, int)
+        # assert isinstance(diff, int)
         self._ptr += diff
         ext = self._ptr - len(self._data)
         if ext < 0:
@@ -70,5 +70,5 @@ class Tape(object):
         """
         devance_by(self, diff: int) -> None
         """
-        assert isinstance(diff, int)
+        # assert isinstance(diff, int)
         self._ptr -= diff

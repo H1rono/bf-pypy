@@ -16,11 +16,11 @@ def run_token(machine, token):
     """
     from .token import INCREMENT, DECREMENT, ADVANCE, DEVANCE, WRITE, READ, LOOP_BEGIN, LOOP_END
 
-    assert isinstance(machine, Machine)
-    assert isinstance(token, Program) and token.kind == Program.KIND_TOKEN
+    # assert isinstance(machine, Machine)
+    # assert isinstance(token, Program) and token.kind == Program.KIND_TOKEN
     token_inner = token.token
-    assert token_inner is not None and is_token(token_inner)
-    assert token_inner not in [LOOP_BEGIN, LOOP_END]
+    # assert token_inner is not None and is_token(token_inner)
+    # assert token_inner not in [LOOP_BEGIN, LOOP_END]
     v = machine.tape.value()
     if token_inner == INCREMENT:
         machine.tape.set_value(v + 1)
@@ -55,7 +55,7 @@ def run_inner(program, machine, is_loop=False):
             if is_loop:
                 i %= len(program)
             continue
-        assert p.kind == Program.KIND_LOOP and p.loop is not None
+        # assert p.kind == Program.KIND_LOOP and p.loop is not None
         run_inner(p.loop, machine, is_loop=True)
         i += 1
         if is_loop:
