@@ -42,12 +42,14 @@ class Tape(object):
         data_verify = (0 <= v < 256 for v in self._data)
         return len(self._data) > self._ptr and all(data_verify)
 
+    @try_inline
     def value(self):
         """
         value(self) -> int
         """
         return self._data[self._ptr]
 
+    @try_inline
     def set_value(self, value):
         """
         value(self, value: int) -> None
