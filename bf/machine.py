@@ -1,3 +1,5 @@
+from os import write
+
 from .tape import Tape
 
 
@@ -12,7 +14,7 @@ class Machine(object):
         self.tape = Tape()
         self._stdin = stdin
         self._stdin_line = ""
-        self._stdout = stdout
+        self._stdout = stdout.fileno()
 
     def read(self):
         """
@@ -35,4 +37,5 @@ class Machine(object):
         write 1byte from tape, to stdout
         """
         buf = chr(self.tape.value())
-        self._stdout.write(buf)
+        # self._stdout.write(buf)
+        write(self._stdout, str(buf))
