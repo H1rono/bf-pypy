@@ -10,6 +10,30 @@ from .program import Program
 from .token import is_token
 
 
+def _get_location(i, is_loop, p, program):
+    """
+    _get_location(i: int, is_loop: bool, p: Program, program: list[Program], machine: Machine) -> str
+    """
+    # assert isinstance(i, int)
+    # assert isinstance(is_loop, bool)
+    # assert isinstance(p, Program)
+    # assert isinstance(program, list)
+    # assert isinstance(machine, Machine)
+    prev = program[:i]
+    prev_str = ""
+    for pr in prev:
+        prev_str += pr.raw_str()
+    rest = program[i + 1:0]
+    rest_str = ""
+    for re in rest:
+        rest_str += re.raw_str()
+    return "%s_%s_%s" % (
+        prev_str,
+        p.raw_str(),
+        rest_str,
+    )
+
+
 def run_token(machine, token):
     """
     run_token(machine: Machine, token: Program.token) -> None
@@ -36,7 +60,12 @@ def run_token(machine, token):
         machine.read()
 
 
-_jit_driver = JitDriver(greens=["i", "is_loop", "p", "program"], reds=["machine"], is_recursive=True)
+_jit_driver = JitDriver(
+    greens=["i", "is_loop", "p", "program"],
+    reds=["machine"],
+    get_printable_location=_get_location,
+    is_recursive=True,
+)
 
 
 def run_inner(program, machine, is_loop=False):
@@ -50,16 +79,15 @@ def run_inner(program, machine, is_loop=False):
         p = program[i]
         _jit_driver.jit_merge_point(i=i, is_loop=is_loop, p=p, program=program, machine=machine)
         if p.kind == Program.KIND_TOKEN:
+            # assert is_token(p.token)
             run_token(machine, p)
-            i += 1
-            if is_loop:
-                i %= len(program)
-            continue
-        # assert p.kind == Program.KIND_LOOP and p.loop is not None
-        run_inner(p.loop, machine, is_loop=True)
+        else:
+            # assert p.kind == Program.KIND_LOOP and p.loop is not None
+            run_inner(p.loop, machine, is_loop=True)
         i += 1
         if is_loop:
             i %= len(program)
+        # _jit_driver.can_enter_jit(i=i, is_loop=is_loop, p=p, program=program, machine=machine)
 
 
 def run(program, stdin, stdout):
