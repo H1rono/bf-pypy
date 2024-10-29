@@ -55,6 +55,17 @@ class Program(object):
             loop += "%s, " % p_str if i < loop_len - 1 else p_str
         return "Program.loop[%s]" % loop
 
+    def raw_str(self):
+        """
+        raw_str(self) -> str
+        """
+        if self.kind == Program.KIND_TOKEN:
+            return self.token
+        loop = ""
+        for l in self.loop:
+            loop += l.raw_str()
+        return "[%s]" % loop
+
 
 def _assert_all_program(it):
     """
