@@ -8,20 +8,19 @@ from .program import Program
 from .token import is_token
 
 
-class LoopContext(object):
-    def __init__(self, machine, loop):
+class Context(object):
+    def __init__(self, machine, program, is_loop=False):
         """
-        __init__(self, machine: Machine, program: Program.loop)
+        __init__(self, machine: Machine, program: list[Program], is_loop: bool)
         """
         assert isinstance(machine, Machine)
-        assert isinstance(loop, Program) and loop.kind == Program.KIND_LOOP
-        assert loop.loop is not None
+        assert isinstance(program, list)
         self._machine = machine
-        # self._loop: list[Program]
-        self._loop = loop.loop
+        self._program = program
         self._current_index = 0
-        # self._current_loop = LoopContext | None
+        # self._current_loop: Context(is_loop=True) | None
         self._current_loop = None
+        self._is_loop = is_loop
 
     def __iter__(self):
         """
@@ -35,14 +34,12 @@ class LoopContext(object):
         _inc_index(self) -> None
         """
         self._current_index += 1
-        self._current_index %= len(self._loop)
+        if self._is_loop:
+            self._current_index %= len(self._program)
 
     def next(self):
-        """
-        next(self) -> Machine
-        """
         if self._current_loop is not None:
-            assert isinstance(self._current_loop, LoopContext)
+            # assert isinstance(self._current_loop, Context)
             try:
                 m = self._current_loop.next()
             except StopIteration:
@@ -51,54 +48,18 @@ class LoopContext(object):
                 return self._machine
             else:
                 return m
-        if self._current_index == 0 and self._machine.tape.value() == 0:
+        if self._is_loop and self._current_index == 0 and self._machine.tape.value() == 0:
             raise StopIteration()
-        program = self._loop[self._current_index]
+        try:
+            program = self._program[self._current_index]
+        except IndexError:
+            raise StopIteration()
         if program.kind == Program.KIND_TOKEN:
             run_token(self._machine, program)
             self._inc_index()
             return self._machine
         assert program.kind == Program.KIND_LOOP
-        self._current_loop = LoopContext(self._machine, program)
-        return self._machine
-
-
-class Context(object):
-    def __init__(self, machine, program):
-        """
-        __init__(self, machine: Machine, program: Parsed)
-        """
-        assert isinstance(machine, Machine)
-        assert isinstance(program, Parsed)
-        self._machine = machine
-        # self._program: Parsed
-        self._program = program
-        # self._current_loop: LoopContext | None
-        self._current_loop = None
-
-    def __iter__(self):
-        """
-        __iter__(self) -> Self
-        # Self: Iterator<Item=Machine>
-        """
-        return self
-
-    def next(self):
-        if self._current_loop is not None:
-            assert isinstance(self._current_loop, LoopContext)
-            try:
-                m = self._current_loop.next()
-            except StopIteration:
-                self._current_loop = None
-                return self._machine
-            else:
-                return m
-        program = self._program.next()
-        if program.kind == Program.KIND_TOKEN:
-            run_token(self._machine, program)
-            return self._machine
-        assert program.kind == Program.KIND_LOOP
-        self._current_loop = LoopContext(self._machine, program)
+        self._current_loop = Context(self._machine, program.loop, True)
         return self._machine
 
 
@@ -152,7 +113,7 @@ def main():
     args = parser.parse_args()
     parser = Parser()
     with tokenize.acquire_from_args(args) as t:
-        program = parser.parse(t)
+        program = parser.parse(t).collect()
         run(program, sys.stdin, sys.stdout)
 
 
