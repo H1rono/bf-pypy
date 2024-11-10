@@ -22,9 +22,9 @@ def _iteration(machine, program, i, token):
     from .token import LOOP_BEGIN, LOOP_END
 
     _jit_driver.jit_merge_point(i=i, program=program, token=token, machine=machine)
-    bf_run.run_token(machine, token)
-    if token.token in [LOOP_BEGIN, LOOP_END]:
-        _jit_driver.can_enter_jit(i=i, program=program, token=token, machine=machine)
+    # assert token.kind = Program.KIND_TOKEN and is_token(token.token)
+    bf_run.run_token(machine, token.token)
+    _jit_driver.can_enter_jit(i=i, program=program, token=token, machine=machine)
 
 
 def run_inner(program, machine):

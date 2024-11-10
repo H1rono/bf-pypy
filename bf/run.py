@@ -70,27 +70,24 @@ class Context(object):
 
 def run_token(machine, token):
     """
-    run_token(machine: Machine, token: Program.token) -> None
+    run_token(machine: Machine, token: Token) -> None
     """
     from .token import INCREMENT, DECREMENT, ADVANCE, DEVANCE, WRITE, READ, LOOP_BEGIN, LOOP_END
 
-    assert isinstance(machine, Machine)
-    assert isinstance(token, Program) and token.kind == Program.KIND_TOKEN
-    token_inner = token.token
-    assert token_inner is not None and is_token(token_inner)
-    # assert token_inner not in [LOOP_BEGIN, LOOP_END]
+    assert is_token(token)
+    # assert token not in [LOOP_BEGIN, LOOP_END]
     v = machine.tape.value()
-    if token_inner == INCREMENT:
+    if token == INCREMENT:
         machine.tape.set_value(v + 1)
-    elif token_inner == DECREMENT:
+    elif token == DECREMENT:
         machine.tape.set_value(v - 1)
-    elif token_inner == ADVANCE:
+    elif token == ADVANCE:
         machine.tape.advance_by(1)
-    elif token_inner == DEVANCE:
+    elif token == DEVANCE:
         machine.tape.devance_by(1)
-    elif token_inner == WRITE:
+    elif token == WRITE:
         machine.write()
-    elif token_inner == READ:
+    elif token == READ:
         machine.read()
 
 
@@ -102,7 +99,7 @@ def run(program, stdin, stdout):
     ctx = Context(machine, program)
     for c in ctx:
         machine, _program_full, _i, p = c
-        run_token(machine, p)
+        run_token(machine, p.token)
 
 
 def set_args(parser):
