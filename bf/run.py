@@ -1,7 +1,7 @@
 import sys
 from argparse import ArgumentParser
 
-from . import tokenize
+from . import tokenize, program as bf_program
 from .machine import Machine
 from .parse import Parser, Parsed
 from .program import Program
@@ -34,20 +34,22 @@ class Context(object):
         _inc_index(self) -> None
         """
         self._current_index += 1
+        i = self._current_index
         if self._is_loop:
             self._current_index %= len(self._program)
+        return i
 
     def next(self):
         if self._current_loop is not None:
             # assert isinstance(self._current_loop, Context)
             try:
-                m = self._current_loop.next()
+                n = self._current_loop.next()
             except StopIteration:
                 self._current_loop = None
-                self._inc_index()
-                return self._machine
+                i = self._inc_index()
+                return (self._machine, self._program, i, bf_program.token("]"))
             else:
-                return m
+                return n
         if self._is_loop and self._current_index == 0 and self._machine.tape.value() == 0:
             raise StopIteration()
         try:
@@ -55,12 +57,13 @@ class Context(object):
         except IndexError:
             raise StopIteration()
         if program.kind == Program.KIND_TOKEN:
-            run_token(self._machine, program)
-            self._inc_index()
-            return self._machine
+            # run_token(self._machine, program)
+            i = self._inc_index()
+            return (self._machine, self._program, i, program)
         assert program.kind == Program.KIND_LOOP
         self._current_loop = Context(self._machine, program.loop, True)
-        return self._machine
+        i = self._current_index + 1
+        return (self._machine, self._program, i, bf_program.token("["))
 
 
 def run_token(machine, token):
@@ -73,7 +76,7 @@ def run_token(machine, token):
     assert isinstance(token, Program) and token.kind == Program.KIND_TOKEN
     token_inner = token.token
     assert token_inner is not None and is_token(token_inner)
-    assert token_inner not in [LOOP_BEGIN, LOOP_END]
+    # assert token_inner not in [LOOP_BEGIN, LOOP_END]
     v = machine.tape.value()
     if token_inner == INCREMENT:
         machine.tape.set_value(v + 1)
@@ -95,8 +98,9 @@ def run(program, stdin, stdout):
     """
     machine = Machine(stdin, stdout)
     ctx = Context(machine, program)
-    for _ in ctx:
-        pass
+    for c in ctx:
+        machine, _program_full, _i, p = c
+        run_token(machine, p)
 
 
 def set_args(parser):
