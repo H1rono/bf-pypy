@@ -9,4 +9,5 @@ $PWD/pypy
 $PWD
 EOF
 ln -s "$PWD/pypy/rpython" "$USER_SITE/rpython"
+ln -s "$PWD/pypy/pypy" "$USER_SITE/pypy"
 pip install -e '.[dev]'
