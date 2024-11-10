@@ -4,6 +4,8 @@ from .tape import Tape
 
 
 class Machine(object):
+    __slots__ = ["tape", "_stdin", "_stdin_line", "_stdout"]
+
     def __init__(self, stdin, stdout):
         """
         __init__(self, stdin: File, stdout: File) -> None

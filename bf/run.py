@@ -9,6 +9,8 @@ from .token import is_token
 
 
 class Context(object):
+    __slots__ = ["_machine", "_program", "_current_index", "_current_loop", "_is_loop"]
+
     def __init__(self, machine, program, is_loop=False):
         """
         __init__(self, machine: Machine, program: list[Program], is_loop: bool)

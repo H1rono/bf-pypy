@@ -26,6 +26,8 @@ from rpython.rlib.objectmodel import try_inline
 
 
 class Tape(object):
+    __slots__ = ["_data", "_ptr"]
+
     def __init__(self):
         self._data = [0]
         self._ptr = 0

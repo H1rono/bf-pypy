@@ -14,6 +14,8 @@ from .token import Token
 
 
 class Tokenize(object):
+    __slots__ = ["_program", "_current_line"]
+
     def __init__(self, program):
         """
         __init__(self, program: Iterator<Item=str>) -> None

@@ -15,6 +15,8 @@ from .token import Token, is_token
 
 
 class Program(object):
+    __slots__ = ["kind", "token", "loop"]
+
     KIND_TOKEN = 0x86 # TO in telephone
     KIND_LOOP = 0x56 # LO in telephone
 

@@ -50,6 +50,8 @@ class Parser(object):
 
 
 class Parsed(object):
+    __slots__ = ["_parser", "_tokenize", "_until", "_inner"]
+
     def __init__(self, parser, tokenize, until=None):
         """
         __init__(self, parser: Parser, tokenize: Tokenize, until: Token | None = None)
