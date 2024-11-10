@@ -3,9 +3,9 @@ from argparse import ArgumentParser
 
 from . import tokenize, program as bf_program
 from .machine import Machine
-from .parse import Parser, Parsed
+from .parse import Parser
 from .program import Program
-from .token import is_token
+from .token import is_token, LOOP_BEGIN, LOOP_END
 
 
 class Context(object):
@@ -45,11 +45,12 @@ class Context(object):
         if self._current_loop is not None:
             # assert isinstance(self._current_loop, Context)
             try:
+                # FIXME: remove recursion
                 n = self._current_loop.next()
             except StopIteration:
                 self._current_loop = None
                 i = self._inc_index()
-                return (self._machine, self._program, i, bf_program.token("]"))
+                return (self._machine, self._program, i, bf_program.token(LOOP_END))
             else:
                 return n
         if self._is_loop and self._current_index == 0 and self._machine.tape.value() == 0:
@@ -65,7 +66,7 @@ class Context(object):
         assert program.kind == Program.KIND_LOOP
         self._current_loop = Context(self._machine, program.loop, True)
         i = self._current_index + 1
-        return (self._machine, self._program, i, bf_program.token("["))
+        return (self._machine, self._program, i, bf_program.token(LOOP_BEGIN))
 
 
 def run_token(machine, token):
