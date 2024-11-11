@@ -27,13 +27,13 @@ class Context(object):
     def __iter__(self):
         """
         __iter__(self) -> Self
-        # Self: Iterator<Item=Machine>
+        # Self: Iterator<Item=(Machine, list[Program], int, Program.token)>
         """
         return self
 
     def _inc_index(self):
         """
-        _inc_index(self) -> None
+        _inc_index(self) -> int
         """
         self._current_index += 1
         i = self._current_index
