@@ -68,6 +68,18 @@ class Program(object):
             loop += l.raw_str()
         return "[%s]" % loop
 
+    def loop_depth(self):
+        """
+        loop_depth(self) -> int
+        """
+        if self.kind == Program.KIND_TOKEN:
+            return 0
+        d = 0
+        for p in self.loop:
+            assert isinstance(p, Program)
+            d = max(d, p.loop_depth())
+        return 1 + d
+
 
 def _assert_all_program(it):
     """
