@@ -1,6 +1,8 @@
 import sys
 from argparse import ArgumentParser
 
+from rpython.rlib.jit import elidable
+
 from . import tokenize, program as bf_program
 from .machine import Machine
 from .parse import Parser
@@ -9,24 +11,16 @@ from .token import is_token, LOOP_BEGIN, LOOP_END
 
 
 class NestContext(object):
-    __slots__ = ["_machine", "_loop", "_current_index"]
+    __slots__ = ["_loop", "_current_index"]
 
-    def __init__(self, machine, loop):
+    @elidable
+    def __init__(self, loop):
         """
-        __init__(self, machine: Machine, loop: list[Program])
+        __init__(self, loop: list[Program])
         """
-        # assert isinstance(machine, Machine)
         # assert isinstance(loop, list)
-        self._machine = machine
         self._loop = loop
         self._current_index = 0
-
-    def __iter__(self):
-        """
-        __iter__(self) -> Self
-        # Self: Iterator<Item=(Machine, list[Program], int, Program)>
-        """
-        return self
 
     def _inc_index(self):
         self._current_index += 1
@@ -34,12 +28,15 @@ class NestContext(object):
         self._current_index %= len(self._loop)
         return i
 
-    def next(self):
-        if self._current_index == 0 and self._machine.tape.value() == 0:
+    def next_with(self, machine):
+        """
+        next_with(self, machine: Machine) -> (list[Program], i, Program)
+        """
+        if self._current_index == 0 and machine.tape.value() == 0:
             raise StopIteration()
         program = self._loop[self._current_index]
         i = self._inc_index()
-        return (self._machine, self._loop, i, program)
+        return (self._loop, i, program)
 
 
 class Context(object):
@@ -74,7 +71,6 @@ class Context(object):
         try:
             loop = self._nest_loops[-1]
         except IndexError:
-            machine = self._machine
             ll = self._program
             try:
                 program = self._program[self._current_index]
@@ -82,18 +78,18 @@ class Context(object):
                 raise StopIteration()
             i = self._inc_index()
         else:
-            # assert isinstance(loop, NestContext)
+            assert isinstance(loop, NestContext)
             try:
-                machine, ll, i, program = loop.next()
+                ll, i, program = loop.next_with(self._machine)
             except StopIteration:
                 del self._nest_loops[-1]
                 end = bf_program.token(LOOP_END)
                 return (self._machine, self._program, self._current_index, end)
         if program.kind == Program.KIND_TOKEN:
-            return (machine, ll, i, program)
-        nest = NestContext(machine, program.loop)
+            return (self._machine, ll, i, program)
+        nest = NestContext(program.loop)
         self._nest_loops.append(nest)
-        return (machine, program.loop, i, bf_program.token(LOOP_BEGIN))
+        return (self._machine, program.loop, i, bf_program.token(LOOP_BEGIN))
 
 
 def run_token(machine, token):
