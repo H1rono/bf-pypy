@@ -10,6 +10,16 @@ from .program import Program
 from .token import is_token, LOOP_BEGIN, LOOP_END
 
 
+def _program_depth(program):
+    """
+    _program_depth(program: list[Program]) -> int
+    """
+    d = 0
+    for p in program:
+        d = max(d, p.loop_depth())
+    return d
+
+
 class NestContext(object):
     __slots__ = ["_loop", "_current_index"]
 
@@ -22,6 +32,13 @@ class NestContext(object):
         self._loop = loop
         self._current_index = 0
 
+    def reset_loop(self, loop):
+        """
+        reset_loop(self, loop: list[Program])
+        """
+        self._loop = loop
+        self._current_index = 0
+
     def next_with(self, machine):
         """
         next_with(self, machine: Machine) -> (list[Program], i, Program)
@@ -30,8 +47,8 @@ class NestContext(object):
             program = self._loop[self._current_index]
         except IndexError:
             raise StopIteration()
-        self._current_index += 1
         i = self._current_index
+        self._current_index += 1
         vv = machine.tape.value() != 0
         if program.token == LOOP_END and vv:
             self._current_index = 0
@@ -41,7 +58,7 @@ class NestContext(object):
 
 
 class Context(object):
-    __slots__ = ["_machine", "_program", "_current_index", "_nest_loops"]
+    __slots__ = ["_machine", "_program", "_current_index", "_nest_loops", "_nest_index"]
 
     def __init__(self, machine, program):
         """
@@ -52,7 +69,9 @@ class Context(object):
         self._machine = machine
         self._program = program
         self._current_index = 0
-        self._nest_loops = []
+        nest_depth = _program_depth(program)
+        self._nest_loops = [NestContext([]) for _ in range(nest_depth)]
+        self._nest_index = -1
 
     def __iter__(self):
         """
@@ -69,17 +88,16 @@ class Context(object):
         return self._current_index
 
     def next(self):
-        try:
-            while True:
-                loop = self._nest_loops.pop(-1)
-                assert isinstance(loop, NestContext)
-                try:
-                    ll, i, program = loop.next_with(self._machine)
-                except StopIteration:
-                    continue
-                self._nest_loops.append(loop)
-                break
-        except IndexError:
+        while self._nest_index >= 0:
+            loop = self._nest_loops[self._nest_index]
+            assert isinstance(loop, NestContext)
+            try:
+                ll, i, program = loop.next_with(self._machine)
+            except StopIteration:
+                self._nest_index -= 1
+                continue
+            break
+        else:
             ll = self._program
             try:
                 program = self._program[self._current_index]
@@ -88,9 +106,9 @@ class Context(object):
             i = self._inc_index()
         if program.kind == Program.KIND_TOKEN:
             return (self._machine, ll, i, program)
-        nest = NestContext(program.loop)
-        self._nest_loops.append(nest)
-        return (self._machine, program.loop, i, bf_program.token(LOOP_BEGIN))
+        self._nest_index += 1
+        self._nest_loops[self._nest_index].reset_loop(program.loop)
+        return self.next()
 
 
 def run_token(machine, token):
