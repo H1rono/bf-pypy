@@ -13,7 +13,7 @@ def entry_point(argv):
     filename = argv[1]
     p = Parser()
     with open(filename) as f, fdopen(0) as stdin, fdopen(1, "w") as stdout:
-        program = p.parse(Tokenize(f))
+        program = p.parse(Tokenize(f)).collect()
         run(program, stdin, stdout)
     return 0
 
