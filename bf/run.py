@@ -22,20 +22,21 @@ class NestContext(object):
         self._loop = loop
         self._current_index = 0
 
-    def _inc_index(self):
-        self._current_index += 1
-        i = self._current_index
-        self._current_index %= len(self._loop)
-        return i
-
     def next_with(self, machine):
         """
         next_with(self, machine: Machine) -> (list[Program], i, Program)
         """
-        if self._current_index == 0 and machine.tape.value() == 0:
+        try:
+            program = self._loop[self._current_index]
+        except IndexError:
             raise StopIteration()
-        program = self._loop[self._current_index]
-        i = self._inc_index()
+        self._current_index += 1
+        i = self._current_index
+        vv = machine.tape.value() != 0
+        if program.token == LOOP_END and vv:
+            self._current_index = 0
+        elif program.token == LOOP_BEGIN and not vv:
+            raise StopIteration()
         return (self._loop, i, program)
 
 
@@ -69,7 +70,15 @@ class Context(object):
 
     def next(self):
         try:
-            loop = self._nest_loops[-1]
+            while True:
+                loop = self._nest_loops.pop(-1)
+                assert isinstance(loop, NestContext)
+                try:
+                    ll, i, program = loop.next_with(self._machine)
+                except StopIteration:
+                    continue
+                self._nest_loops.append(loop)
+                break
         except IndexError:
             ll = self._program
             try:
@@ -77,14 +86,6 @@ class Context(object):
             except IndexError:
                 raise StopIteration()
             i = self._inc_index()
-        else:
-            assert isinstance(loop, NestContext)
-            try:
-                ll, i, program = loop.next_with(self._machine)
-            except StopIteration:
-                del self._nest_loops[-1]
-                end = bf_program.token(LOOP_END)
-                return (self._machine, self._program, self._current_index, end)
         if program.kind == Program.KIND_TOKEN:
             return (self._machine, ll, i, program)
         nest = NestContext(program.loop)

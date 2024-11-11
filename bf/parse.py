@@ -50,18 +50,25 @@ class Parser(object):
 
 
 class Parsed(object):
-    __slots__ = ["_parser", "_tokenize", "_until", "_inner"]
+    __slots__ = ["_parser", "_tokenize", "_begin", "_end", "_stopped", "_inner"]
 
-    def __init__(self, parser, tokenize, until=None):
+    def __init__(self, parser, tokenize, begin=None, end=None):
         """
-        __init__(self, parser: Parser, tokenize: Tokenize, until: Token | None = None)
+        __init__(
+            self,
+            parser: Parser, tokenize: Tokenize,
+            begin: Token | None = None, end: Token | None = None
+        )
         """
         assert isinstance(parser, Parser)
         assert isinstance(tokenize, Tokenize)
-        assert until is None or token.is_token(until)
+        assert begin is None or token.is_token(begin)
+        assert end is None or token.is_token(end)
         self._parser = parser
         self._tokenize = tokenize
-        self._until = until
+        self._begin = begin
+        self._end = end
+        self._stopped = False
         # self._inner: Parsed | None
         self._inner = None
 
@@ -79,14 +86,22 @@ class Parsed(object):
         return Parsed(
             self._parser,
             self._tokenize,
-            token.LOOP_END,
+            token.LOOP_BEGIN,
+            token.LOOP_END
         )
 
     def next(self):
+        if self._stopped:
+            raise StopIteration()
+        if self._begin is not None:
+            b = self._begin
+            self._begin = None
+            return program.token(b)
         t = self._tokenize.next()
         assert token.is_token(t)
-        if token.is_token(self._until) and t == self._until:
-            raise StopIteration()
+        if self._end is not None and t == self._end:
+            self._stopped = True
+            return program.token(t)
         if t == token.LOOP_BEGIN:
             loop = program.loop(self._nest_loop())
             return loop
