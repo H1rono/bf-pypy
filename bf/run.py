@@ -8,21 +8,53 @@ from .program import Program
 from .token import is_token, LOOP_BEGIN, LOOP_END
 
 
-class Context(object):
-    __slots__ = ["_machine", "_program", "_current_index", "_current_loop", "_is_loop"]
+class NestContext(object):
+    __slots__ = ["_machine", "_loop", "_current_index"]
 
-    def __init__(self, machine, program, is_loop=False):
+    def __init__(self, machine, loop):
         """
-        __init__(self, machine: Machine, program: list[Program], is_loop: bool)
+        __init__(self, machine: Machine, loop: list[Program])
+        """
+        # assert isinstance(machine, Machine)
+        # assert isinstance(loop, list)
+        self._machine = machine
+        self._loop = loop
+        self._current_index = 0
+
+    def __iter__(self):
+        """
+        __iter__(self) -> Self
+        # Self: Iterator<Item=(Machine, list[Program], int, Program)>
+        """
+        return self
+
+    def _inc_index(self):
+        self._current_index += 1
+        i = self._current_index
+        self._current_index %= len(self._loop)
+        return i
+
+    def next(self):
+        if self._current_index == 0 and self._machine.tape.value() == 0:
+            raise StopIteration()
+        program = self._loop[self._current_index]
+        i = self._inc_index()
+        return (self._machine, self._loop, i, program)
+
+
+class Context(object):
+    __slots__ = ["_machine", "_program", "_current_index", "_nest_loops"]
+
+    def __init__(self, machine, program):
+        """
+        __init__(self, machine: Machine, program: list[Program])
         """
         assert isinstance(machine, Machine)
         assert isinstance(program, list)
         self._machine = machine
         self._program = program
         self._current_index = 0
-        # self._current_loop: Context(is_loop=True) | None
-        self._current_loop = None
-        self._is_loop = is_loop
+        self._nest_loops = []
 
     def __iter__(self):
         """
@@ -36,37 +68,32 @@ class Context(object):
         _inc_index(self) -> int
         """
         self._current_index += 1
-        i = self._current_index
-        if self._is_loop:
-            self._current_index %= len(self._program)
-        return i
+        return self._current_index
 
     def next(self):
-        if self._current_loop is not None:
-            # assert isinstance(self._current_loop, Context)
-            try:
-                # FIXME: remove recursion
-                n = self._current_loop.next()
-            except StopIteration:
-                self._current_loop = None
-                i = self._inc_index()
-                return (self._machine, self._program, i, bf_program.token(LOOP_END))
-            else:
-                return n
-        if self._is_loop and self._current_index == 0 and self._machine.tape.value() == 0:
-            raise StopIteration()
         try:
-            program = self._program[self._current_index]
+            loop = self._nest_loops[-1]
         except IndexError:
-            raise StopIteration()
-        if program.kind == Program.KIND_TOKEN:
-            # run_token(self._machine, program)
+            machine = self._machine
+            ll = self._program
+            try:
+                program = self._program[self._current_index]
+            except IndexError:
+                raise StopIteration()
             i = self._inc_index()
-            return (self._machine, self._program, i, program)
-        assert program.kind == Program.KIND_LOOP
-        self._current_loop = Context(self._machine, program.loop, True)
-        i = self._current_index + 1
-        return (self._machine, self._program, i, bf_program.token(LOOP_BEGIN))
+        else:
+            # assert isinstance(loop, NestContext)
+            try:
+                machine, ll, i, program = loop.next()
+            except StopIteration:
+                del self._nest_loops[-1]
+                end = bf_program.token(LOOP_END)
+                return (self._machine, self._program, self._current_index, end)
+        if program.kind == Program.KIND_TOKEN:
+            return (machine, ll, i, program)
+        nest = NestContext(machine, program.loop)
+        self._nest_loops.append(nest)
+        return (machine, program.loop, i, bf_program.token(LOOP_BEGIN))
 
 
 def run_token(machine, token):
