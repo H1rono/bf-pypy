@@ -18,9 +18,10 @@ _jit_driver = JitDriver(
 
 def _iteration(frame):
     pos, machine, program = frame
-    token = program.tokens[pos.at]
+    token = program.tokens[pos]
     _jit_driver.jit_merge_point(pos=pos, program=program, token=token, machine=machine)
-    run_token(pos, machine, token, program)
+    npos = run_token(pos, machine, token, program)
+    return npos
 
 
 def run(program, stdin, stdout):
@@ -30,7 +31,8 @@ def run(program, stdin, stdout):
     machine = Machine(stdin, stdout)
     frames = Frames(machine, program)
     for f in frames:
-        _iteration(f)
+        p = _iteration(f)
+        frames.pos = p
 
 
 def set_args(parser):

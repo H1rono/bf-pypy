@@ -7,18 +7,13 @@ from .parse import parse, ParseResult
 from .token import Token
 
 
-class Position(object):
-    def __init__(self, at = 0):
-        self.at = at
-
-
 class Frames(object):
-    __slots__ = ["_pos", "_machine", "_program"]
+    __slots__ = ["pos", "_machine", "_program"]
 
     def __init__(self, machine, program):
         assert isinstance(machine, Machine)
         assert isinstance(program, ParseResult)
-        self._pos = Position(-1)
+        self.pos = -1
         self._machine = machine
         self._program = program
 
@@ -26,15 +21,15 @@ class Frames(object):
         return self
 
     def next(self):
-        self._pos.at += 1
-        if self._pos.at >= len(self._program.tokens):
+        self.pos += 1
+        if self.pos >= len(self._program.tokens):
             raise StopIteration()
-        return (self._pos, self._machine, self._program)
+        return (self.pos, self._machine, self._program)
 
 
 def run_token(position, machine, token, program):
     """
-    run_token(position: Position, machine: Machine, token: Token, program: ParseResult) -> None
+    run_token(position: int, machine: Machine, token: Token, program: ParseResult) -> int
     """
     from .token import INCREMENT, DECREMENT, ADVANCE, DEVANCE, WRITE, READ, LOOP_BEGIN, LOOP_END
 
@@ -45,6 +40,7 @@ def run_token(position, machine, token, program):
     raw = token.raw
     # assert token not in [LOOP_BEGIN, LOOP_END]
     v = machine.tape.value()
+    npos = position
     if raw == INCREMENT:
         machine.tape.set_value(v + 1)
     elif raw == DECREMENT:
@@ -59,10 +55,11 @@ def run_token(position, machine, token, program):
         machine.read()
     elif raw == LOOP_BEGIN:
         if v == 0:
-            position.at = program.bracket_map[position.at]
+            npos = program.bracket_map[position]
     elif raw == LOOP_END:
         if v != 0:
-            position.at = program.bracket_map[position.at]
+            npos = program.bracket_map[position]
+    return npos
 
 
 def run(program, stdin, stdout):
@@ -72,8 +69,9 @@ def run(program, stdin, stdout):
     assert isinstance(program, ParseResult)
     it = Frames(Machine(stdin, stdout), program)
     for position, machine, program in it:
-        token = program.tokens[position.at]
-        run_token(position, machine, token, program)
+        token = program.tokens[position]
+        p = run_token(position, machine, token, program)
+        it.pos = p
 
 
 def set_args(parser):
