@@ -12,6 +12,26 @@ class Position(object):
         self.at = at
 
 
+class Frames(object):
+    __slots__ = ["_pos", "_machine", "_program"]
+
+    def __init__(self, machine, program):
+        assert isinstance(machine, Machine)
+        assert isinstance(program, ParseResult)
+        self._pos = Position(-1)
+        self._machine = machine
+        self._program = program
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        self._pos.at += 1
+        if self._pos.at >= len(self._program.tokens):
+            raise StopIteration()
+        return (self._pos, self._machine, self._program)
+
+
 def run_token(position, machine, token, program):
     """
     run_token(position: Position, machine: Machine, token: Token, program: ParseResult) -> None
@@ -50,12 +70,10 @@ def run(program, stdin, stdout):
     run(program: ParseResult, stdin: File, stdout: File) -> None
     """
     assert isinstance(program, ParseResult)
-    machine = Machine(stdin, stdout)
-    pos = Position()
-    while pos.at < len(program.tokens):
-        token = program.tokens[pos.at]
-        run_token(pos, machine, token, program)
-        pos.at += 1
+    it = Frames(Machine(stdin, stdout), program)
+    for position, machine, program in it:
+        token = program.tokens[position.at]
+        run_token(position, machine, token, program)
 
 
 def set_args(parser):
