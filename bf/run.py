@@ -37,7 +37,7 @@ def run_token(position, machine, token, program):
     # assert isinstance(machine, Machine)
     # assert isinstance(token, Token)
     # assert isinstance(program, ParseResult)
-    raw = token.raw
+    raw, _ = token
     # assert token not in [LOOP_BEGIN, LOOP_END]
     v = machine.tape.value()
     npos = position
@@ -69,7 +69,7 @@ def run(program, stdin, stdout):
     assert isinstance(program, ParseResult)
     it = Frames(Machine(stdin, stdout), program)
     for position, machine, program in it:
-        token = program.tokens[position]
+        token = program.tokens[position].as_tuple()
         p = run_token(position, machine, token, program)
         it.pos = p
 

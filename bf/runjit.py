@@ -5,20 +5,31 @@ from rpython.rlib.jit import JitDriver
 
 from . import tokenize
 from .machine import Machine
-from .parse import parse
+from .parse import parse, ParseResult
 from .run import run_token, Frames
+
+
+def _get_printable_location(pos, program, token):
+    # assert isinstance(program, ParseResult)
+    raw, token_pos = token
+    begin, end = token_pos
+    return "%s_%s_%s" % (
+        program.raw[:begin],
+        raw,
+        program.raw[end:],
+    )
 
 
 _jit_driver = JitDriver(
     greens=["pos", "program", "token"],
     reds=["machine"],
-    is_recursive=True
+    get_printable_location=_get_printable_location,
 )
 
 
 def _iteration(frame):
     pos, machine, program = frame
-    token = program.tokens[pos]
+    token = program.tokens[pos].as_tuple()
     _jit_driver.jit_merge_point(pos=pos, program=program, token=token, machine=machine)
     npos = run_token(pos, machine, token, program)
     return npos
