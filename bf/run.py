@@ -1,148 +1,61 @@
 import sys
 from argparse import ArgumentParser
 
-from rpython.rlib.jit import elidable
-
-from . import tokenize, program as bf_program
+from . import tokenize
 from .machine import Machine
-from .parse import Parser
-from .program import Program
-from .token import is_token, LOOP_BEGIN, LOOP_END
+from .parse import parse, ParseResult
+from .token import Token
 
 
-def _program_depth(program):
+class Position(object):
+    def __init__(self, at = 0):
+        self.at = at
+
+
+def run_token(position, machine, token, program):
     """
-    _program_depth(program: list[Program]) -> int
-    """
-    d = 0
-    for p in program:
-        d = max(d, p.loop_depth())
-    return d
-
-
-class NestContext(object):
-    __slots__ = ["_loop", "_current_index"]
-
-    @elidable
-    def __init__(self, loop):
-        """
-        __init__(self, loop: list[Program])
-        """
-        # assert isinstance(loop, list)
-        self._loop = loop
-        self._current_index = 0
-
-    def reset_loop(self, loop):
-        """
-        reset_loop(self, loop: list[Program])
-        """
-        self._loop = loop
-        self._current_index = 0
-
-    def next_with(self, machine):
-        """
-        next_with(self, machine: Machine) -> (list[Program], i, Program)
-        """
-        try:
-            program = self._loop[self._current_index]
-        except IndexError:
-            raise StopIteration()
-        i = self._current_index
-        self._current_index += 1
-        vv = machine.tape.value() != 0
-        if program.token == LOOP_END and vv:
-            self._current_index = 0
-        elif program.token == LOOP_BEGIN and not vv:
-            raise StopIteration()
-        return (self._loop, i, program)
-
-
-class Context(object):
-    __slots__ = ["_machine", "_program", "_current_index", "_nest_loops", "_nest_index"]
-
-    def __init__(self, machine, program):
-        """
-        __init__(self, machine: Machine, program: list[Program])
-        """
-        assert isinstance(machine, Machine)
-        assert isinstance(program, list)
-        self._machine = machine
-        self._program = program
-        self._current_index = 0
-        nest_depth = _program_depth(program)
-        self._nest_loops = [NestContext([]) for _ in range(nest_depth)]
-        self._nest_index = -1
-
-    def __iter__(self):
-        """
-        __iter__(self) -> Self
-        # Self: Iterator<Item=(Machine, list[Program], int, Program.token)>
-        """
-        return self
-
-    def _inc_index(self):
-        """
-        _inc_index(self) -> int
-        """
-        self._current_index += 1
-        return self._current_index
-
-    def next(self):
-        while self._nest_index >= 0:
-            loop = self._nest_loops[self._nest_index]
-            assert isinstance(loop, NestContext)
-            try:
-                ll, i, program = loop.next_with(self._machine)
-            except StopIteration:
-                self._nest_index -= 1
-                continue
-            break
-        else:
-            ll = self._program
-            try:
-                program = self._program[self._current_index]
-            except IndexError:
-                raise StopIteration()
-            i = self._inc_index()
-        if program.kind == Program.KIND_TOKEN:
-            return (self._machine, ll, i, program)
-        self._nest_index += 1
-        self._nest_loops[self._nest_index].reset_loop(program.loop)
-        return self.next()
-
-
-def run_token(machine, token):
-    """
-    run_token(machine: Machine, token: Token) -> None
+    run_token(position: Position, machine: Machine, token: Token, program: ParseResult) -> None
     """
     from .token import INCREMENT, DECREMENT, ADVANCE, DEVANCE, WRITE, READ, LOOP_BEGIN, LOOP_END
 
-    assert is_token(token)
+    # assert isinstance(position, Position)
+    # assert isinstance(machine, Machine)
+    # assert isinstance(token, Token)
+    # assert isinstance(program, ParseResult)
+    raw = token.raw
     # assert token not in [LOOP_BEGIN, LOOP_END]
     v = machine.tape.value()
-    if token == INCREMENT:
+    if raw == INCREMENT:
         machine.tape.set_value(v + 1)
-    elif token == DECREMENT:
+    elif raw == DECREMENT:
         machine.tape.set_value(v - 1)
-    elif token == ADVANCE:
+    elif raw == ADVANCE:
         machine.tape.advance_by(1)
-    elif token == DEVANCE:
+    elif raw == DEVANCE:
         machine.tape.devance_by(1)
-    elif token == WRITE:
+    elif raw == WRITE:
         machine.write()
-    elif token == READ:
+    elif raw == READ:
         machine.read()
+    elif raw == LOOP_BEGIN:
+        if v == 0:
+            position.at = program.bracket_map[position.at]
+    elif raw == LOOP_END:
+        if v != 0:
+            position.at = program.bracket_map[position.at]
 
 
 def run(program, stdin, stdout):
     """
-    run(program: Parsed, stdin: File, stdout: File) -> None
+    run(program: ParseResult, stdin: File, stdout: File) -> None
     """
+    assert isinstance(program, ParseResult)
     machine = Machine(stdin, stdout)
-    ctx = Context(machine, program)
-    for c in ctx:
-        machine, _program_full, _i, p = c
-        run_token(machine, p.token)
+    pos = Position()
+    while pos.at < len(program.tokens):
+        token = program.tokens[pos.at]
+        run_token(pos, machine, token, program)
+        pos.at += 1
 
 
 def set_args(parser):
@@ -157,9 +70,8 @@ def main():
     parser = ArgumentParser("parse")
     tokenize.set_args(parser)
     args = parser.parse_args()
-    parser = Parser()
     with tokenize.acquire_from_args(args) as t:
-        program = parser.parse(t).collect()
+        program = parse(t)
         run(program, sys.stdin, sys.stdout)
 
 
