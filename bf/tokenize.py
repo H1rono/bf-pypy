@@ -58,6 +58,25 @@ class Tokenize(object):
         """
         return [t for t in self]
 
+    def enumerate(self):
+        return Enumerated(self)
+
+
+class Enumerated(object):
+    def __init__(self, tokenize):
+        assert isinstance(tokenize, Tokenize)
+        self._tokenize = tokenize
+        self._i = 0
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        token = self._tokenize.next()
+        i = self._i
+        self._i += 1
+        return (i, token)
+
 
 def set_args(parser):
     """
