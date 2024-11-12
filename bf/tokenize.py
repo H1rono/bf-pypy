@@ -49,6 +49,12 @@ class Tokenize(object):
             self._current_line = rest
         return t
 
+    def collect(self):
+        """
+        collect(self) -> list[Token]
+        """
+        return [t for t in self]
+
 
 def set_args(parser):
     """
