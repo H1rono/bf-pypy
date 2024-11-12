@@ -29,18 +29,7 @@ WRITE = "."
 READ = ","
 LOOP_BEGIN = "["
 LOOP_END = "]"
-
-
-def members():
-    """
-    members() -> list[Token]
-    """
-    return [
-        INCREMENT, DECREMENT,
-        ADVANCE, DEVANCE,
-        WRITE, READ,
-        LOOP_BEGIN, LOOP_END
-    ]
+MEMBERS = [INCREMENT, DECREMENT, ADVANCE, DEVANCE, WRITE, READ, LOOP_BEGIN, LOOP_END]
 
 
 def is_token(token):
@@ -48,7 +37,7 @@ def is_token(token):
     is_token(token: (Maybe) Token) -> bool
     replace of isinstance(token, Token)
     """
-    return token in members()
+    return token in MEMBERS
 
 
 class _TokenMeta(type):
