@@ -34,25 +34,27 @@ MEMBERS = [INCREMENT, DECREMENT, ADVANCE, DEVANCE, WRITE, READ, LOOP_BEGIN, LOOP
 
 def is_token(token):
     """
-    is_token(token: (Maybe) Token) -> bool
-    replace of isinstance(token, Token)
+    is_token(token: char) -> bool
     """
     return token in MEMBERS
 
 
-class _TokenMeta(type):
-    def __instancecheck__(self, other):
-        """
-        __instancecheck(self, other: type) -> bool
-        """
-        return other in members()
-
-
 class Token(object):
-    __metaclass__ = _TokenMeta
+    def __init__(self, raw, position):
+        """
+        __init__(self, raw: str, position: (int, int))
+        # position: (begin, end)
+        """
+        self.raw = raw
+        begin, end = position
+        self.pos_begin = begin
+        self.pos_end = end
 
-    def __init__(self):
-        return NotImplemented
+    def as_tuple(self):
+        """
+        as_tuple(self) -> (str, (int, int))
+        """
+        return (self.raw, (self.pos_begin, self.pos_end))
 
 
 def from_char(c):

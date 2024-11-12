@@ -14,7 +14,7 @@ from .token import Token
 
 
 class Tokenize(object):
-    __slots__ = ["_program", "_current_line"]
+    __slots__ = ["_program", "_current_line", "_i"]
 
     def __init__(self, program):
         """
@@ -23,6 +23,7 @@ class Tokenize(object):
         self._program = program
         # self._current_line: str | None
         self._current_line = ''
+        self._i = 0
 
     def __iter__(self):
         """
@@ -47,7 +48,9 @@ class Tokenize(object):
             rest = self._current_line[1:]
             t = token.from_char(head)
             self._current_line = rest
-        return t
+        i = self._i
+        self._i += 1
+        return Token(t, (i, i + 1))
 
     def collect(self):
         """
