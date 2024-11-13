@@ -18,8 +18,7 @@ from .parse import parse
 from .token import *
 
 
-def get_location(pc, program, metadata):
-    instructions, _ = metadata
+def get_location(pc, program, instructions, bracket_map):
     _, _, pos = instructions[pc]
     begin, end = pos
     return "%s_%s_%s" % (
@@ -27,7 +26,11 @@ def get_location(pc, program, metadata):
     )
 
 
-jitdriver = JitDriver(greens=['pc', 'program', 'instructions', 'bracket_map'], reds=['machine'])
+jitdriver = JitDriver(
+    greens=['pc', 'program', 'instructions', 'bracket_map'],
+    reds=['machine'],
+    get_printable_location=get_location,
+)
 
 
 def mainloop(program, metadata, machine):
