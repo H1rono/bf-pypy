@@ -1,6 +1,8 @@
 import sys
 from argparse import ArgumentParser
 
+from rpython.rlib.jit import elidable
+
 from . import tokenize
 from .machine import Machine
 from .parse import parse, ParseResult
@@ -25,6 +27,14 @@ class Frames(object):
         if self.pos >= len(self._program.tokens):
             raise StopIteration()
         return (self.pos, self._machine, self._program)
+
+
+@elidable
+def loop_correspond(pos, program):
+    """
+    loop_correspond(pos: int, program: ParseResult) -> int
+    """
+    return program.bracket_map[pos]
 
 
 def run_token(position, machine, token, program):
@@ -55,10 +65,10 @@ def run_token(position, machine, token, program):
         machine.read()
     elif raw == LOOP_BEGIN:
         if v == 0:
-            npos = program.bracket_map[position]
+            npos = loop_correspond(position, program)
     elif raw == LOOP_END:
         if v != 0:
-            npos = program.bracket_map[position]
+            npos = loop_correspond(position, program)
     return npos
 
 
@@ -70,8 +80,7 @@ def run(program, stdin, stdout):
     it = Frames(Machine(stdin, stdout), program)
     for position, machine, program in it:
         token = program.tokens[position].as_tuple()
-        p = run_token(position, machine, token, program)
-        it.pos = p
+        it.pos = run_token(position, machine, token, program)
 
 
 def set_args(parser):
