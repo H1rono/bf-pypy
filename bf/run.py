@@ -13,13 +13,14 @@ except ImportError:
 
         def can_enter_jit(self, **kw): pass
 
+from .instruction import KIND_ONE_CHAR, KIND_MULTIPLY, KIND_SIMPLE_OPS
 from .machine import Machine
 from .parse import parse
 from .token import *
 
 
 def get_location(pc, program, instructions, bracket_map):
-    _, _, pos = instructions[pc]
+    _, _, _, pos = instructions[pc]
     begin, end = pos
     return "%s_%s_%s" % (
         program[:begin], program[begin:end], program[end:]
@@ -33,6 +34,45 @@ jitdriver = JitDriver(
 )
 
 
+def instruction_at(instructions, i):
+    return instructions[i]
+
+
+def corresponding_bracket(map, i):
+    return map[i]
+
+
+def instruction_one_char(pc, program, instr, bracket_map, machine):
+    _, _, rng = instr
+    begin, _ = rng
+    code = program[begin]
+    if code == ADVANCE:
+        machine.advance_by(1)
+    elif code == DEVANCE:
+        machine.devance_by(1)
+    elif code == INCREMENT:
+        machine.inc_by(1)
+    elif code == DECREMENT:
+        machine.dec_by(1)
+    elif code == WRITE:
+        machine.write()
+    elif code == READ:
+        machine.read()
+    elif code == LOOP_BEGIN and machine.get() == 0:
+        # Skip forward to the matching ]
+        return corresponding_bracket(bracket_map, pc)
+    elif code == LOOP_END and machine.get() != 0:
+        # Skip back to the matching [
+        return corresponding_bracket(bracket_map, pc)
+    return pc
+
+
+def instruction_simple_ops(pc, program, instr, bracket_map, machine):
+    vds, dpos, rng = instr
+    machine.accept_val_diffs(vds)
+    machine.advance_by(dpos)
+
+
 def mainloop(program, metadata, machine):
     instructions, bracket_map = metadata
     pc = 0
@@ -43,34 +83,12 @@ def mainloop(program, metadata, machine):
             instructions=instructions, bracket_map=bracket_map,
         )
 
-        vds, dpos, rng = instructions[pc]
-        if vds is not None:
-            machine.accept_val_diffs(vds)
-            machine.advance_by(dpos)
-            pc += 1
-            continue
-        begin, end = rng
-        assert end - begin == 1
-        code = program[begin:end]
-        if code == ADVANCE:
-            machine.advance_by(1)
-        elif code == DEVANCE:
-            machine.devance_by(1)
-        elif code == INCREMENT:
-            machine.inc_by(1)
-        elif code == DECREMENT:
-            machine.dec_by(1)
-        elif code == WRITE:
-            machine.write()
-        elif code == READ:
-            machine.read()
-        elif code == LOOP_BEGIN and machine.get() == 0:
-            # Skip forward to the matching ]
-            pc = bracket_map[pc]
-        elif code == LOOP_END and machine.get() != 0:
-            # Skip back to the matching [
-            pc = bracket_map[pc]
-
+        kind, vds, dpos, rng = instruction_at(instructions, pc)
+        instr = (vds, dpos, rng)
+        if kind == KIND_SIMPLE_OPS:
+            instruction_simple_ops(pc, program, instr, bracket_map, machine)
+        elif kind == KIND_ONE_CHAR:
+            pc = instruction_one_char(pc, program, instr, bracket_map, machine)
         pc += 1
 
 

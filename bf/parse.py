@@ -1,3 +1,4 @@
+from . import instruction
 from .token import *
 
 
@@ -25,7 +26,8 @@ def parse_simple(tokens):
         elif c == DEVANCE:
             dpos -= 1
     vds = [(k, v) for k, v in val_diffs.items()]
-    return ("".join(raw), vds, dpos, (begin, end + 1))
+    instr = instruction.simple_ops(vds, dpos, (begin, end + 1))
+    return ("".join(raw), instr)
 
 
 def parse(tokens):
@@ -40,10 +42,10 @@ def parse(tokens):
             simple.append((pc, char))
             continue
         if simple:
-            code = parse_simple(simple)
+            raw, instr = parse_simple(simple)
             simple = []
-            parsed.append(code)
-        code = (char, None, 0, (pc, pc + 1))
+            parsed.append((raw, instr))
+        instr = instruction.one_char(pc)
         if char == LOOP_BEGIN:
             leftstack.append(len(parsed))
         elif char == LOOP_END:
@@ -51,9 +53,9 @@ def parse(tokens):
             right = len(parsed)
             bracket_map[left] = right
             bracket_map[right] = left
-        parsed.append(code)
+        parsed.append((char, instr))
 
-    raw = [c for c, _, _, _ in parsed]
-    instructions = [(vds, dpos, rng) for _, vds, dpos, rng in parsed]
+    raw = [r for r, _ in parsed]
+    instructions = [instr for _, instr in parsed]
     metadata = (instructions, bracket_map)
     return ("".join(raw), metadata)
