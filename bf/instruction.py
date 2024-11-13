@@ -15,5 +15,5 @@ def simple_ops(val_diffs, dpos, position):
     return (KIND_SIMPLE_OPS, val_diffs, dpos, position)
 
 
-def multiply(val_diffs, dpos, position):
-    return (KIND_MULTIPLY, val_diffs, dpos, position)
+def multiply(val_diffs, position):
+    return (KIND_MULTIPLY, val_diffs, 0, position)
