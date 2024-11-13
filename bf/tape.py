@@ -9,16 +9,18 @@ class Tape(object):
     def set(self, val):
         self.thetape[self.position] = val
 
-    def inc(self):
-        self.thetape[self.position] += 1
+    def inc_by(self, diff):
+        self.thetape[self.position] += diff
 
-    def dec(self):
-        self.thetape[self.position] -= 1
+    def dec_by(self, diff):
+        self.thetape[self.position] -= diff
 
-    def advance(self):
-        self.position += 1
-        if len(self.thetape) <= self.position:
-            self.thetape.append(0)
+    def advance_by(self, pos_diff):
+        self.position += pos_diff
+        len_tape = len(self.thetape)
+        if len_tape <= self.position:
+            ext = [0] * (self.position - len_tape + 1)
+            self.thetape.extend(ext)
 
-    def devance(self):
-        self.position -= 1
+    def devance_by(self, diff):
+        self.position -= diff

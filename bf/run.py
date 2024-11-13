@@ -38,13 +38,13 @@ def mainloop(program, bracket_map):
 
         code = program[pc]
         if code == ADVANCE:
-            tape.advance()
+            tape.advance_by(1)
         elif code == DEVANCE:
-            tape.devance()
+            tape.devance_by(1)
         elif code == INCREMENT:
-            tape.inc()
+            tape.inc_by(1)
         elif code == DECREMENT:
-            tape.dec()
+            tape.dec_by(1)
         elif code == WRITE:
             # print
             os.write(1, chr(tape.get()))

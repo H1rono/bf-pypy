@@ -15,6 +15,7 @@ except ImportError:
 
 from bf.parse import parse
 from bf.tape import Tape
+from bf.token import *
 
 
 def get_location(pc, program, bracket_map):
@@ -36,35 +37,26 @@ def mainloop(program, bracket_map):
                                   bracket_map=bracket_map)
 
         code = program[pc]
-
-        if code == ">":
-            tape.advance()
-
-        elif code == "<":
-            tape.devance()
-
-        elif code == "+":
-            tape.inc()
-
-        elif code == "-":
-            tape.dec()
-
-        elif code == ".":
+        if code == ADVANCE:
+            tape.advance_by(1)
+        elif code == DEVANCE:
+            tape.devance_by(1)
+        elif code == INCREMENT:
+            tape.inc_by(1)
+        elif code == DECREMENT:
+            tape.dec_by(1)
+        elif code == WRITE:
             # print
             os.write(1, chr(tape.get()))
-
-        elif code == ",":
+        elif code == READ:
             # read from stdin
             tape.set(ord(os.read(0, 1)[0]))
-
-        elif code == "[" and tape.get() == 0:
+        elif code == LOOP_BEGIN and tape.get() == 0:
             # Skip forward to the matching ]
             pc = bracket_map[pc]
-
-        elif code == "]" and tape.get() != 0:
+        elif code == LOOP_END and tape.get() != 0:
             # Skip back to the matching [
             pc = bracket_map[pc]
-
         pc += 1
 
 
