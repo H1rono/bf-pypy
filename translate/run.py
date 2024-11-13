@@ -26,9 +26,9 @@ def entry_point(argv):
         return 1
 
     with open(filename) as fp:
-        program, bm = parse(Tokens(fp))
+        program, instructions, bm = parse(Tokens(fp))
     with os.fdopen(0, 'r') as stdin, os.fdopen(1, 'w') as stdout:
-        run(program, bm, stdin, stdout)
+        run(program, instructions, bm, stdin, stdout)
     return 0
 
 

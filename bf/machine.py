@@ -9,6 +9,14 @@ class Machine(Tape):
         self.stdin = stdin.fileno()
         self.stdout = stdout.fileno()
 
+    def accept_val_diffs(self, val_diffs):
+        for dpos, dval in val_diffs:
+            pos = self.position + dpos
+            ext_len = pos - len(self.thetape)
+            if ext_len >= 0:
+                self.thetape.extend([0] * (ext_len + 1))
+            self.thetape[pos] += dval
+
     def read(self):
         buf = read(self.stdin, 1)[0]
         self.set(ord(buf))

@@ -18,24 +18,35 @@ from .parse import parse
 from .token import *
 
 
-def get_location(pc, program, bracket_map):
+def get_location(pc, program, instructions, bracket_map):
+    _, _, pos = instructions[pc]
+    begin, end = pos
     return "%s_%s_%s" % (
-        program[:pc], program[pc], program[pc + 1:]
+        program[:begin], program[begin:end], program[end:]
     )
 
 
-jitdriver = JitDriver(greens=['pc', 'program', 'bracket_map'], reds=['machine'],
-                      get_printable_location=get_location)
+jitdriver = JitDriver(greens=['pc', 'program', 'instructions', 'bracket_map'], reds=['machine'])
 
 
-def mainloop(program, bracket_map, machine):
+def mainloop(program, instructions, bracket_map, machine):
     pc = 0
 
-    while pc < len(program):
-        jitdriver.jit_merge_point(pc=pc, machine=machine, program=program,
-                                  bracket_map=bracket_map)
+    while pc < len(instructions):
+        jitdriver.jit_merge_point(
+            pc=pc, machine=machine, program=program,
+            instructions=instructions, bracket_map=bracket_map,
+        )
 
-        code = program[pc]
+        vds, dpos, rng = instructions[pc]
+        if vds is not None:
+            machine.accept_val_diffs(vds)
+            machine.advance_by(dpos)
+            pc += 1
+            continue
+        begin, end = rng
+        assert end - begin == 1
+        code = program[begin:end]
         if code == ADVANCE:
             machine.advance_by(1)
         elif code == DEVANCE:
@@ -45,10 +56,8 @@ def mainloop(program, bracket_map, machine):
         elif code == DECREMENT:
             machine.dec_by(1)
         elif code == WRITE:
-            # print
             machine.write()
         elif code == READ:
-            # read from stdin
             machine.read()
         elif code == LOOP_BEGIN and machine.get() == 0:
             # Skip forward to the matching ]
@@ -60,9 +69,9 @@ def mainloop(program, bracket_map, machine):
         pc += 1
 
 
-def run(program, bm, stdin, stdout):
+def run(program, instructions, bm, stdin, stdout):
     machine = Machine(stdin, stdout)
-    mainloop(program, bm, machine)
+    mainloop(program, instructions, bm, machine)
 
 
 def entry_point(argv):
@@ -73,9 +82,9 @@ def entry_point(argv):
         return 1
 
     with open(filename) as fp:
-        program, bm = parse(Tokens(fp))
+        program, instructions, bm = parse(Tokens(fp))
     with os.fdopen(0, 'r') as stdin, os.fdopen(1, 'w') as stdout:
-        run(program, bm, stdin, stdout)
+        run(program, instructions, bm, stdin, stdout)
     return 0
 
 
