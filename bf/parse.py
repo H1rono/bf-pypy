@@ -1,46 +1,24 @@
-from argparse import ArgumentParser
-
-from . import tokenize
-from .token import Token, LOOP_BEGIN, LOOP_END
-from .tokenize import Tokenize
+from .token import MEMBERS, LOOP_BEGIN, LOOP_END
 
 
-class ParseResult(object):
-    __slots__ = ["tokens", "bracket_map", "raw"]
-
-    def __init__(self, tokens, bracket_map):
-        self.tokens = tokens
-        self.bracket_map = bracket_map
-        self.raw = "".join([t.raw for t in self.tokens])
-
-
-def parse(tokenize):
-    assert isinstance(tokenize, Tokenize)
-    tokens = []
+def parse(program):
+    parsed = []
     bracket_map = {}
-    loop_nests = []
-    it = tokenize.enumerate()
-    for i, token in it:
-        tokens.append(token)
-        if token.raw == LOOP_BEGIN:
-            loop_nests.append(i)
-        elif token.raw == LOOP_END:
-            begin_i = loop_nests.pop(-1)
-            bracket_map[i] = begin_i
-            bracket_map[begin_i] = i
-    return ParseResult(tokens, bracket_map)
+    leftstack = []
 
+    pc = 0
+    for char in program:
+        if char not in MEMBERS:
+            continue
 
-def main():
-    parser = ArgumentParser("parse")
-    tokenize.set_args(parser)
-    args = parser.parse_args()
-    with tokenize.acquire_from_args(args) as t:
-        result = parse(t)
-    print result.bracket_map
-    for e in result.tokens:
-        print e.as_tuple()
+        parsed.append(char)
+        if char == LOOP_BEGIN:
+            leftstack.append(pc)
+        elif char == LOOP_END:
+            left = leftstack.pop()
+            right = pc
+            bracket_map[left] = right
+            bracket_map[right] = left
+        pc += 1
 
-
-if __name__ == "__main__":
-    main()
+    return "".join(parsed), bracket_map

@@ -1,104 +1,97 @@
+import os
 import sys
-from argparse import ArgumentParser
 
-from rpython.rlib.jit import elidable
+# So that you can still run this module under standard CPython, I add this
+# import guard that creates a dummy class instead.
+try:
+    from rpython.rlib.jit import JitDriver
+except ImportError:
+    class JitDriver(object):
+        def __init__(self, **kw): pass
 
-from . import tokenize
-from .machine import Machine
-from .parse import parse, ParseResult
-from .token import Token
+        def jit_merge_point(self, **kw): pass
 
+        def can_enter_jit(self, **kw): pass
 
-class Frames(object):
-    __slots__ = ["pos", "_machine", "_program"]
-
-    def __init__(self, machine, program):
-        assert isinstance(machine, Machine)
-        assert isinstance(program, ParseResult)
-        self.pos = -1
-        self._machine = machine
-        self._program = program
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        self.pos += 1
-        if self.pos >= len(self._program.tokens):
-            raise StopIteration()
-        return (self.pos, self._machine, self._program)
+from .parse import parse
+from .tape import Tape
+from .token import *
 
 
-@elidable
-def loop_correspond(pos, program):
-    """
-    loop_correspond(pos: int, program: ParseResult) -> int
-    """
-    return program.bracket_map[pos]
+def get_location(pc, program, bracket_map):
+    return "%s_%s_%s" % (
+        program[:pc], program[pc], program[pc + 1:]
+    )
 
 
-def run_token(position, machine, token, program):
-    """
-    run_token(position: int, machine: Machine, token: Token, program: ParseResult) -> int
-    """
-    from .token import INCREMENT, DECREMENT, ADVANCE, DEVANCE, WRITE, READ, LOOP_BEGIN, LOOP_END
-
-    # assert isinstance(position, Position)
-    # assert isinstance(machine, Machine)
-    # assert isinstance(token, Token)
-    # assert isinstance(program, ParseResult)
-    raw, _ = token
-    # assert token not in [LOOP_BEGIN, LOOP_END]
-    v = machine.tape.value()
-    npos = position
-    if raw == INCREMENT:
-        machine.tape.set_value(v + 1)
-    elif raw == DECREMENT:
-        machine.tape.set_value(v - 1)
-    elif raw == ADVANCE:
-        machine.tape.advance_by(1)
-    elif raw == DEVANCE:
-        machine.tape.devance_by(1)
-    elif raw == WRITE:
-        machine.write()
-    elif raw == READ:
-        machine.read()
-    elif raw == LOOP_BEGIN:
-        if v == 0:
-            npos = loop_correspond(position, program)
-    elif raw == LOOP_END:
-        if v != 0:
-            npos = loop_correspond(position, program)
-    return npos
+jitdriver = JitDriver(greens=['pc', 'program', 'bracket_map'], reds=['tape'],
+                      get_printable_location=get_location)
 
 
-def run(program, stdin, stdout):
-    """
-    run(program: ParseResult, stdin: File, stdout: File) -> None
-    """
-    assert isinstance(program, ParseResult)
-    it = Frames(Machine(stdin, stdout), program)
-    for position, machine, program in it:
-        token = program.tokens[position].as_tuple()
-        it.pos = run_token(position, machine, token, program)
+def mainloop(program, bracket_map):
+    pc = 0
+    tape = Tape()
+
+    while pc < len(program):
+        jitdriver.jit_merge_point(pc=pc, tape=tape, program=program,
+                                  bracket_map=bracket_map)
+
+        code = program[pc]
+        if code == ADVANCE:
+            tape.advance()
+        elif code == DEVANCE:
+            tape.devance()
+        elif code == INCREMENT:
+            tape.inc()
+        elif code == DECREMENT:
+            tape.dec()
+        elif code == WRITE:
+            # print
+            os.write(1, chr(tape.get()))
+        elif code == READ:
+            # read from stdin
+            tape.set(ord(os.read(0, 1)[0]))
+        elif code == LOOP_BEGIN and tape.get() == 0:
+            # Skip forward to the matching ]
+            pc = bracket_map[pc]
+        elif code == LOOP_END and tape.get() != 0:
+            # Skip back to the matching [
+            pc = bracket_map[pc]
+
+        pc += 1
 
 
-def set_args(parser):
-    """
-    set_args(parser: ArgumentParser) -> None
-    """
-    assert isinstance(parser, ArgumentParser)
-    parser.add_argument()
+def run(fp):
+    program_contents = ""
+    while True:
+        read = os.read(fp, 4096)
+        if len(read) == 0:
+            break
+        program_contents += read
+    os.close(fp)
+    program, bm = parse(program_contents)
+    mainloop(program, bm)
 
 
-def main():
-    parser = ArgumentParser("parse")
-    tokenize.set_args(parser)
-    args = parser.parse_args()
-    with tokenize.acquire_from_args(args) as t:
-        program = parse(t)
-        run(program, sys.stdin, sys.stdout)
+def entry_point(argv):
+    try:
+        filename = argv[1]
+    except IndexError:
+        print "You must supply a filename"
+        return 1
+
+    run(os.open(filename, os.O_RDONLY, 0777))
+    return 0
+
+
+def target(*args):
+    return entry_point, None
+
+
+def jitpolicy(driver):
+    from rpython.jit.codewriter.policy import JitPolicy
+    return JitPolicy()
 
 
 if __name__ == "__main__":
-    main()
+    entry_point(sys.argv)
