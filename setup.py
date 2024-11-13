@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 
 setup(
@@ -10,4 +10,5 @@ setup(
     extras_require={
         "dev": [],
     },
+    packages=find_packages()
 )
