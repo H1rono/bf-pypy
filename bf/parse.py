@@ -6,8 +6,7 @@ def parse(tokens):
     bracket_map = {}
     leftstack = []
 
-    pc = 0
-    for char in tokens:
+    for pc, char in tokens.enumerate():
         # assert char in MEMBERS
         parsed.append(char)
         if char == LOOP_BEGIN:
@@ -17,6 +16,5 @@ def parse(tokens):
             right = pc
             bracket_map[left] = right
             bracket_map[right] = left
-        pc += 1
 
-    return "".join(parsed), bracket_map
+    return parsed, bracket_map
