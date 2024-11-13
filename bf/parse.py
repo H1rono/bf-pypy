@@ -1,136 +1,45 @@
-"""
-```bash
-$ cat tmp/test.b
-+++
-hoge
-[+++>>>,,---]
-```
-
-```python
->>>> from bf.tokenize import Tokenize
->>>> from bf.parse import Parser
->>>> with open("tmp/test.b", mode="r") as f:
-....     t = Tokenize(f)
-....     p = Parser()
-....     p = list(p.parse(t))
-....
->>>> for e in p:
-....     print e
-....
-Program.token(+)
-Program.token(+)
-Program.token(+)
-Program.loop[Program.token(+), Program.token(+), Program.token(+), Program.token(>), Program.token(>), Program.token(>), Program.token(,), Program.token(,), Program.token(-), Program.token(-), Program.token(-)]
-```
-
-```bash
-$ pypy -m bf.parse < tmp/test.b
-Program.token(+)
-Program.token(+)
-Program.token(+)
-Program.loop[Program.token(+), Program.token(+), Program.token(+), Program.token(>), Program.token(>), Program.token(>), Program.token(,), Program.token(,), Program.token(-), Program.token(-), Program.token(-)]
-```
-"""
-
 from argparse import ArgumentParser
 
-from . import token, tokenize, program
+from . import tokenize
+from .token import Token, LOOP_BEGIN, LOOP_END
 from .tokenize import Tokenize
 
 
-class Parser(object):
-    def __init__(self):
-        pass
+class ParseResult(object):
+    __slots__ = ["tokens", "bracket_map", "raw"]
 
-    def parse(self, tokenize):
-        """
-        parse(self, tokenize: Tokenize) -> Parsed
-        """
-        return Parsed(self, tokenize)
+    def __init__(self, tokens, bracket_map):
+        self.tokens = tokens
+        self.bracket_map = bracket_map
+        self.raw = "".join([t.raw for t in self.tokens])
 
 
-class Parsed(object):
-    __slots__ = ["_parser", "_tokenize", "_begin", "_end", "_stopped", "_inner"]
-
-    def __init__(self, parser, tokenize, begin=None, end=None):
-        """
-        __init__(
-            self,
-            parser: Parser, tokenize: Tokenize,
-            begin: Token | None = None, end: Token | None = None
-        )
-        """
-        assert isinstance(parser, Parser)
-        assert isinstance(tokenize, Tokenize)
-        assert begin is None or token.is_token(begin)
-        assert end is None or token.is_token(end)
-        self._parser = parser
-        self._tokenize = tokenize
-        self._begin = begin
-        self._end = end
-        self._stopped = False
-        # self._inner: Parsed | None
-        self._inner = None
-
-    def __iter__(self):
-        """
-        __iter__(self) -> Self
-        # Self: Iterator<Item=Program>
-        """
-        return self
-
-    def _nest_loop(self):
-        """
-        nest_loop(self) -> Self
-        """
-        return Parsed(
-            self._parser,
-            self._tokenize,
-            token.LOOP_BEGIN,
-            token.LOOP_END
-        )
-
-    def next(self):
-        if self._stopped:
-            raise StopIteration()
-        if self._begin is not None:
-            b = self._begin
-            self._begin = None
-            return program.token(b)
-        t = self._tokenize.next()
-        assert token.is_token(t)
-        if self._end is not None and t == self._end:
-            self._stopped = True
-            return program.token(t)
-        if t == token.LOOP_BEGIN:
-            loop = program.loop(self._nest_loop())
-            return loop
-        assert t not in [token.LOOP_BEGIN, token.LOOP_END]
-        return program.token(t)
-
-    def collect(self):
-        """
-        collect(self) -> list[Program]
-        """
-        return [p for p in self]
-
-
-def set_parse_args(parser):
-    """
-    set_parse_args(parser: ArgumentParser) -> None
-    """
-    tokenize.set_args(parser)
+def parse(tokenize):
+    assert isinstance(tokenize, Tokenize)
+    tokens = []
+    bracket_map = {}
+    loop_nests = []
+    it = tokenize.enumerate()
+    for i, token in it:
+        tokens.append(token)
+        if token.raw == LOOP_BEGIN:
+            loop_nests.append(i)
+        elif token.raw == LOOP_END:
+            begin_i = loop_nests.pop(-1)
+            bracket_map[i] = begin_i
+            bracket_map[begin_i] = i
+    return ParseResult(tokens, bracket_map)
 
 
 def main():
     parser = ArgumentParser("parse")
     tokenize.set_args(parser)
     args = parser.parse_args()
-    parser = Parser()
     with tokenize.acquire_from_args(args) as t:
-        program = parser.parse(t).collect()
-    for e in program:
-        print e
+        result = parse(t)
+    print result.bracket_map
+    for e in result.tokens:
+        print e.as_tuple()
 
 
 if __name__ == "__main__":
