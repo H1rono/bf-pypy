@@ -43,8 +43,8 @@ def corresponding_bracket(map, i):
 
 
 def instruction_one_char(pc, program, instr, bracket_map, machine):
-    _, _, rng = instr
-    begin, _ = rng
+    _vds, _dpos, rng = instr
+    begin, _end = rng
     code = program[begin]
     if code == ADVANCE:
         machine.advance_by(1)
@@ -67,10 +67,15 @@ def instruction_one_char(pc, program, instr, bracket_map, machine):
     return pc
 
 
-def instruction_simple_ops(pc, program, instr, bracket_map, machine):
-    vds, dpos, rng = instr
+def instruction_simple_ops(_pc, _program, instr, _bracket_map, machine):
+    vds, dpos, _rng = instr
     machine.accept_val_diffs(vds)
     machine.advance_by(dpos)
+
+
+def instruction_multiply(_pc, _program, instr, _bracket_map, machine):
+    vds, _dpos, _rng = instr
+    machine.mul_accept_val_diffs(vds)
 
 
 def mainloop(program, metadata, machine):
@@ -89,6 +94,8 @@ def mainloop(program, metadata, machine):
             instruction_simple_ops(pc, program, instr, bracket_map, machine)
         elif kind == KIND_ONE_CHAR:
             pc = instruction_one_char(pc, program, instr, bracket_map, machine)
+        elif kind == KIND_MULTIPLY:
+            instruction_multiply(pc, program, instr, bracket_map, machine)
         pc += 1
 
 
