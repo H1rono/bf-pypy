@@ -13,62 +13,7 @@ except ImportError:
 
         def can_enter_jit(self, **kw): pass
 
-from bf.machine import Machine
-from bf.parse import parse
-from bf.token import *
-
-
-def get_location(pc, program, bracket_map):
-    return "%s_%s_%s" % (
-        program[:pc], program[pc], program[pc + 1:]
-    )
-
-
-jitdriver = JitDriver(greens=['pc', 'program', 'bracket_map'], reds=['machine'],
-                      get_printable_location=get_location)
-
-
-def mainloop(program, bracket_map, machine):
-    pc = 0
-
-    while pc < len(program):
-        jitdriver.jit_merge_point(pc=pc, machine=machine, program=program,
-                                  bracket_map=bracket_map)
-
-        code = program[pc]
-        if code == ADVANCE:
-            machine.advance_by(1)
-        elif code == DEVANCE:
-            machine.devance_by(1)
-        elif code == INCREMENT:
-            machine.inc_by(1)
-        elif code == DECREMENT:
-            machine.dec_by(1)
-        elif code == WRITE:
-            # print
-            machine.write()
-        elif code == READ:
-            # read from stdin
-            machine.read()
-        elif code == LOOP_BEGIN and machine.get() == 0:
-            # Skip forward to the matching ]
-            pc = bracket_map[pc]
-        elif code == LOOP_END and machine.get() != 0:
-            # Skip back to the matching [
-            pc = bracket_map[pc]
-        pc += 1
-
-
-def run(fp, stdin, stdout):
-    program_contents = ""
-    while True:
-        read = os.read(fp, 4096)
-        if len(read) == 0:
-            break
-        program_contents += read
-    program, bm = parse(program_contents)
-    machine = Machine(stdin, stdout)
-    mainloop(program, bm, machine)
+from bf.run import run
 
 
 def entry_point(argv):

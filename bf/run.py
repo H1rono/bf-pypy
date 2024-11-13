@@ -84,14 +84,5 @@ def entry_point(argv):
     return 0
 
 
-def target(*args):
-    return entry_point, None
-
-
-def jitpolicy(driver):
-    from rpython.jit.codewriter.policy import JitPolicy
-    return JitPolicy()
-
-
 if __name__ == "__main__":
     entry_point(sys.argv)
