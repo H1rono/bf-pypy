@@ -1,18 +1,6 @@
 import os
 import sys
 
-# So that you can still run this module under standard CPython, I add this
-# import guard that creates a dummy class instead.
-try:
-    from rpython.rlib.jit import JitDriver
-except ImportError:
-    class JitDriver(object):
-        def __init__(self, **kw): pass
-
-        def jit_merge_point(self, **kw): pass
-
-        def can_enter_jit(self, **kw): pass
-
 from bf.parse import parse
 from bf.run import run
 from bf.token import Tokens
@@ -26,9 +14,9 @@ def entry_point(argv):
         return 1
 
     with open(filename) as fp:
-        program, instructions, bm = parse(Tokens(fp))
+        program, metadata = parse(Tokens(fp))
     with os.fdopen(0, 'r') as stdin, os.fdopen(1, 'w') as stdout:
-        run(program, instructions, bm, stdin, stdout)
+        run(program, metadata, stdin, stdout)
     return 0
 
 

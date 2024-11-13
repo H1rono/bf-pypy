@@ -18,7 +18,8 @@ from .parse import parse
 from .token import *
 
 
-def get_location(pc, program, instructions, bracket_map):
+def get_location(pc, program, metadata):
+    instructions, _ = metadata
     _, _, pos = instructions[pc]
     begin, end = pos
     return "%s_%s_%s" % (
@@ -29,7 +30,8 @@ def get_location(pc, program, instructions, bracket_map):
 jitdriver = JitDriver(greens=['pc', 'program', 'instructions', 'bracket_map'], reds=['machine'])
 
 
-def mainloop(program, instructions, bracket_map, machine):
+def mainloop(program, metadata, machine):
+    instructions, bracket_map = metadata
     pc = 0
 
     while pc < len(instructions):
@@ -69,9 +71,9 @@ def mainloop(program, instructions, bracket_map, machine):
         pc += 1
 
 
-def run(program, instructions, bm, stdin, stdout):
+def run(program, metadata, stdin, stdout):
     machine = Machine(stdin, stdout)
-    mainloop(program, instructions, bm, machine)
+    mainloop(program, metadata, machine)
 
 
 def entry_point(argv):
@@ -82,9 +84,9 @@ def entry_point(argv):
         return 1
 
     with open(filename) as fp:
-        program, instructions, bm = parse(Tokens(fp))
+        program, metadata = parse(Tokens(fp))
     with os.fdopen(0, 'r') as stdin, os.fdopen(1, 'w') as stdout:
-        run(program, instructions, bm, stdin, stdout)
+        run(program, metadata, stdin, stdout)
     return 0
 
 

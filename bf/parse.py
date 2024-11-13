@@ -4,8 +4,8 @@ from .token import *
 def parse_simple(tokens):
     """
     [INCREMENT, DECREMENT, ADVANCE, DEVANCE]
-    :param tokens:
-    :return:
+    :param tokens: list[(int, char)]
+    :return: (str, list[(int, int)], int, (int, int))
     """
     dpos = 0
     raw = []
@@ -33,7 +33,6 @@ def parse(tokens):
     bracket_map = {}
     leftstack = []
     simple = []
-    i = 0
 
     for pc, char in tokens.enumerate():
         # assert char in MEMBERS
@@ -44,18 +43,17 @@ def parse(tokens):
             code = parse_simple(simple)
             simple = []
             parsed.append(code)
-            i += 1
         code = (char, None, 0, (pc, pc + 1))
         if char == LOOP_BEGIN:
-            leftstack.append(i)
+            leftstack.append(len(parsed))
         elif char == LOOP_END:
             left = leftstack.pop()
-            right = i
+            right = len(parsed)
             bracket_map[left] = right
             bracket_map[right] = left
         parsed.append(code)
-        i += 1
 
     raw = [c for c, _, _, _ in parsed]
     instructions = [(vds, dpos, rng) for _, vds, dpos, rng in parsed]
-    return ("".join(raw), instructions, bracket_map)
+    metadata = (instructions, bracket_map)
+    return ("".join(raw), metadata)
