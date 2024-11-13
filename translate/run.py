@@ -13,7 +13,9 @@ except ImportError:
 
         def can_enter_jit(self, **kw): pass
 
+from bf.parse import parse
 from bf.run import run
+from bf.token import Tokens
 
 
 def entry_point(argv):
@@ -23,8 +25,10 @@ def entry_point(argv):
         print "You must supply a filename"
         return 1
 
-    with open(filename) as fp, os.fdopen(0) as stdin, os.fdopen(1, 'w') as stdout:
-        run(fp.fileno(), stdin, stdout)
+    with open(filename) as fp:
+        program, bm = parse(Tokens(fp))
+    with os.fdopen(0, 'r') as stdin, os.fdopen(1, 'w') as stdout:
+        run(program, bm, stdin, stdout)
     return 0
 
 

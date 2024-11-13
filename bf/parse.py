@@ -1,16 +1,14 @@
 from .token import MEMBERS, LOOP_BEGIN, LOOP_END
 
 
-def parse(program):
+def parse(tokens):
     parsed = []
     bracket_map = {}
     leftstack = []
 
     pc = 0
-    for char in program:
-        if char not in MEMBERS:
-            continue
-
+    for char in tokens:
+        # assert char in MEMBERS
         parsed.append(char)
         if char == LOOP_BEGIN:
             leftstack.append(pc)

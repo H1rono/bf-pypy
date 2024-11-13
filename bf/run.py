@@ -60,14 +60,7 @@ def mainloop(program, bracket_map, machine):
         pc += 1
 
 
-def run(fp, stdin, stdout):
-    program_contents = ""
-    while True:
-        read = os.read(fp, 4096)
-        if len(read) == 0:
-            break
-        program_contents += read
-    program, bm = parse(program_contents)
+def run(program, bm, stdin, stdout):
     machine = Machine(stdin, stdout)
     mainloop(program, bm, machine)
 
@@ -79,8 +72,10 @@ def entry_point(argv):
         print "You must supply a filename"
         return 1
 
-    with open(filename) as fp, os.fdopen(0) as stdin, os.fdopen(1, 'w') as stdout:
-        run(fp.fileno(), stdin, stdout)
+    with open(filename) as fp:
+        program, bm = parse(Tokens(fp))
+    with os.fdopen(0, 'r') as stdin, os.fdopen(1, 'w') as stdout:
+        run(program, bm, stdin, stdout)
     return 0
 
 
