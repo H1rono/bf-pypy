@@ -52,9 +52,38 @@ def parse_bracket_map(program, instructions):
     return bracket_map
 
 
+def parse_loop_to_multiply(begin, body, end):
+    if not body:
+        return None
+    dpos_acc = 0
+    val_diffs_acc = {}
+    raw_acc = ""
+    for r, instr in body:
+        kind, vds, dpos, _rng = instr
+        if kind != instruction.KIND_SIMPLE_OPS:
+            return None
+        for dp, dv in vds:
+            pos = dpos_acc + dp
+            val_diffs_acc[pos] = val_diffs_acc.get(pos, 0) + dv
+        dpos_acc += dpos
+        raw_acc += r
+    if dpos_acc != 0:
+        return None
+    begin_raw, begin_instr = begin
+    begin_i, _ = begin_instr[-1]
+    end_raw, end_instr = end
+    _, end_i = end_instr[-1]
+    raw = begin_raw + raw_acc + end_raw
+    val_diffs = [(dp, dv) for dp, dv in val_diffs_acc.items()]
+    rng = (begin_i, end_i)
+    instr = instruction.multiply(val_diffs, rng)
+    return [(raw, instr)]
+
+
 def parse(tokens):
     parsed = []
     simple = []
+    loop_begin_stack = []
     for pc, char in tokens.enumerate():
         # assert char in MEMBERS
         if char in SIMPLES:
@@ -64,8 +93,24 @@ def parse(tokens):
             raw, instr = parse_simple(simple)
             simple = []
             parsed.append((raw, instr))
+        if char == LOOP_BEGIN or char in IO_OPS:
+            if char == LOOP_BEGIN:
+                loop_begin_stack.append(len(parsed))
+            instr = instruction.one_char(pc)
+            parsed.append((char, instr))
+            continue
+        # char == LOOP_END
+        begin_at = loop_begin_stack.pop()
+        begin = parsed[begin_at]
+        body = parsed[begin_at + 1:]
         instr = instruction.one_char(pc)
-        parsed.append((char, instr))
+        end = (char, instr)
+        parsed_mul = parse_loop_to_multiply(begin, body, end)
+        if parsed_mul is not None:
+            del parsed[begin_at:]
+            parsed.extend(parsed_mul)
+        else:
+            parsed.append(end)
     raw = "".join([r for r, _ in parsed])
     instructions = [instr for _, instr in parsed]
     bracket_map = parse_bracket_map(raw, instructions)
