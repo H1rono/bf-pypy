@@ -1,6 +1,7 @@
 from collections import namedtuple
 
 from . import instruction
+from .tape import DictTape
 from .token import *
 
 
@@ -10,9 +11,8 @@ def parse_simple(tokens):
     :param tokens: list[(int, char)]
     :return: (str, list[(int, int)], int, (int, int))
     """
-    dpos = 0
     raw = []
-    val_diffs = {}
+    tape = DictTape()
     begin, _ = tokens[0]
     end = begin
     for i, c in tokens:
@@ -20,15 +20,15 @@ def parse_simple(tokens):
         end = max(end, i)
         raw.append(c)
         if c == INCREMENT:
-            val_diffs[dpos] = val_diffs.get(dpos, 0) + 1
+            tape.inc_by(1)
         elif c == DECREMENT:
-            val_diffs[dpos] = val_diffs.get(dpos, 0) - 1
+            tape.dec_by(1)
         elif c == ADVANCE:
-            dpos += 1
+            tape.advance_by(1)
         elif c == DEVANCE:
-            dpos -= 1
-    vds = [(k, v) for k, v in val_diffs.items()]
-    instr = instruction.simple_ops(vds, dpos, (begin, end + 1))
+            tape.devance_by(1)
+    vds = [(dp, dv) for dp, dv in tape.data.items()]
+    instr = instruction.simple_ops(vds, tape.position, (begin, end + 1))
     return ("".join(raw), instr)
 
 
@@ -57,26 +57,23 @@ def parse_bracket_map(program, instructions):
 def parse_loop_to_multiply(begin, body, end):
     if not body:
         return None
-    dpos_acc = 0
-    val_diffs_acc = {}
+    tape = DictTape()
     raw_acc = ""
     for r, instr in body:
         kind, vds, dpos, _rng = instr
         if kind != instruction.KIND_SIMPLE_OPS:
             return None
-        for dp, dv in vds:
-            pos = dpos_acc + dp
-            val_diffs_acc[pos] = val_diffs_acc.get(pos, 0) + dv
-        dpos_acc += dpos
+        tape.accept_val_diffs(vds)
+        tape.advance_by(dpos)
         raw_acc += r
-    if dpos_acc != 0 or val_diffs_acc[0] != -1:
+    if tape.position != 0 or tape.data.get(0, 0) != -1:
         return None
     begin_raw, begin_instr = begin
     begin_i, _ = begin_instr[-1]
     end_raw, end_instr = end
     _, end_i = end_instr[-1]
     raw = begin_raw + raw_acc + end_raw
-    val_diffs = [(dp, dv) for dp, dv in val_diffs_acc.items()]
+    val_diffs = [(dp, dv) for dp, dv in tape.data.items()]
     rng = (begin_i, end_i)
     instr = instruction.multiply(val_diffs, rng)
     return [(raw, instr)]
@@ -105,8 +102,7 @@ def parse(tokens):
         begin_at = loop_begin_stack.pop()
         begin = parsed[begin_at]
         body = parsed[begin_at + 1:]
-        instr = instruction.one_char(pc)
-        end = (char, instr)
+        end = (char, instruction.one_char(pc))
         parsed_mul = parse_loop_to_multiply(begin, body, end)
         if parsed_mul is not None:
             del parsed[begin_at:]
