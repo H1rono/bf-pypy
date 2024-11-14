@@ -78,3 +78,6 @@ class DictTape(object):
         mul_val_diffs = [(dpos, dval * mul_by) for dpos, dval in val_diffs]
         self.accept_val_diffs(mul_val_diffs)
         # assert self.get() == 0
+
+    def collect_val_diffs(self):
+        return [(dp, dv) for dp, dv in self.data.items()]
