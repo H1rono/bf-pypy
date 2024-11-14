@@ -37,7 +37,7 @@ class Tape(object):
         mul_by = self.get()
         mul_val_diffs = [(dpos, dval * mul_by) for dpos, dval in val_diffs]
         self.accept_val_diffs(mul_val_diffs)
-        self.set(0)
+        # assert self.get() == 0
 
 
 class DictTape(object):
@@ -77,4 +77,4 @@ class DictTape(object):
         mul_by = self.get()
         mul_val_diffs = [(dpos, dval * mul_by) for dpos, dval in val_diffs]
         self.accept_val_diffs(mul_val_diffs)
-        self.set(0)
+        # assert self.get() == 0
