@@ -27,9 +27,10 @@ def parse_simple(tokens):
             tape.advance_by(1)
         elif c == DEVANCE:
             tape.devance_by(1)
-    vds = [(dp, dv) for dp, dv in tape.data.items()]
-    instr = instruction.simple_ops(vds, tape.position, (begin, end + 1))
-    return ("".join(raw), instr)
+    val_diffs = [(dp, dv) for dp, dv in tape.data.items()]
+    dpos = tape.position
+    rng = (begin, end + 1)
+    return ("".join(raw), val_diffs, dpos, rng)
 
 
 def parse_bracket_map(program, instructions):
@@ -54,20 +55,21 @@ def parse_bracket_map(program, instructions):
     return bracket_map
 
 
-def parse_loop_to_multiply(begin, body, end):
+def parse_loop_to_multiply(val_diffs, begin, body, end):
     if not body:
-        return None
+        return (None, None, (0, 0))
     tape = DictTape()
     raw_acc = ""
     for r, instr in body:
-        kind, vds, dpos, _rng = instr
+        kind, vds_rng, dpos, _rng = instr
         if kind != instruction.KIND_SIMPLE_OPS:
-            return None
-        tape.accept_val_diffs(vds)
+            return (None, None, (0, 0))
+        vds_begin, vds_end = vds_rng
+        tape.accept_val_diffs(val_diffs[vds_begin:vds_end])
         tape.advance_by(dpos)
         raw_acc += r
     if tape.position != 0 or tape.data.get(0, 0) != -1:
-        return None
+        return (None, None, (0, 0))
     begin_raw, begin_instr = begin
     begin_i, _ = begin_instr[-1]
     end_raw, end_instr = end
@@ -75,22 +77,26 @@ def parse_loop_to_multiply(begin, body, end):
     raw = begin_raw + raw_acc + end_raw
     val_diffs = [(dp, dv) for dp, dv in tape.data.items()]
     rng = (begin_i, end_i)
-    instr = instruction.multiply(val_diffs, rng)
-    return [(raw, instr)]
+    return (raw, val_diffs, rng)
 
 
 def parse(tokens):
     parsed = []
     simple = []
     loop_begin_stack = []
+    val_diffs = []
     for pc, char in tokens.enumerate():
         # assert char in MEMBERS
         if char in SIMPLES:
             simple.append((pc, char))
             continue
         if simple:
-            raw, instr = parse_simple(simple)
+            raw, vds, dp, rng = parse_simple(simple)
             simple = []
+            vds_begin = len(val_diffs)
+            val_diffs.extend(vds)
+            vds_end = len(val_diffs)
+            instr = instruction.simple_ops((vds_begin, vds_end), dp, rng)
             parsed.append((raw, instr))
         if char == LOOP_BEGIN or char in IO_OPS:
             if char == LOOP_BEGIN:
@@ -103,16 +109,20 @@ def parse(tokens):
         begin = parsed[begin_at]
         body = parsed[begin_at + 1:]
         end = (char, instruction.one_char(pc))
-        parsed_mul = parse_loop_to_multiply(begin, body, end)
-        if parsed_mul is not None:
-            del parsed[begin_at:]
-            parsed.extend(parsed_mul)
-        else:
+        raw, vds, rng = parse_loop_to_multiply(val_diffs, begin, body, end)
+        if raw is None:
             parsed.append(end)
+            continue
+        del parsed[begin_at:]
+        vds_begin = len(val_diffs)
+        val_diffs.extend(vds)
+        vds_end = len(val_diffs)
+        instr = instruction.multiply((vds_begin, vds_end), rng)
+        parsed.append((raw, instr))
     raw = "".join([r for r, _ in parsed])
     instructions = [instr for _, instr in parsed]
     bracket_map = parse_bracket_map(raw, instructions)
-    metadata = (instructions, bracket_map)
+    metadata = (instructions, val_diffs, bracket_map)
     return (raw, metadata)
 
 

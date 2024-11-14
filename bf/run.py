@@ -9,7 +9,7 @@ from .parse import parse
 from .token import *
 
 
-def get_location(pc, program, instructions, bracket_map):
+def get_location(pc, program, instructions, val_diffs, bracket_map):
     _, _, _, rng = instructions[pc]
     begin, end = rng
     return "%s_%s_%s" % (
@@ -18,7 +18,7 @@ def get_location(pc, program, instructions, bracket_map):
 
 
 jitdriver = jit.JitDriver(
-    greens=['pc', 'program', 'instructions', 'bracket_map'],
+    greens=['pc', 'program', 'instructions', 'val_diffs', 'bracket_map'],
     reds=['machine'],
     get_printable_location=get_location,
 )
@@ -28,11 +28,16 @@ def instruction_at(instructions, i):
     return instructions[i]
 
 
+def val_diffs_in(val_diffs, rng):
+    begin, end = rng
+    return val_diffs[begin:end]
+
+
 def corresponding_bracket(map, i):
     return map[i]
 
 
-def instruction_one_char(pc, program, instr, bracket_map, machine):
+def instruction_one_char(pc, program, instr, _val_diffs, bracket_map, machine):
     _vds, _dpos, rng = instr
     begin, _end = rng
     code = program[begin]
@@ -57,35 +62,37 @@ def instruction_one_char(pc, program, instr, bracket_map, machine):
     return pc
 
 
-def instruction_simple_ops(_pc, _program, instr, _bracket_map, machine):
-    vds, dpos, _rng = instr
+def instruction_simple_ops(_pc, _program, instr, val_diffs, _bracket_map, machine):
+    vds_rng, dpos, _rng = instr
+    vds = val_diffs_in(val_diffs, vds_rng)
     machine.accept_val_diffs(vds)
     machine.advance_by(dpos)
 
 
-def instruction_multiply(_pc, _program, instr, _bracket_map, machine):
-    vds, _dpos, _rng = instr
+def instruction_multiply(_pc, _program, instr, val_diffs, _bracket_map, machine):
+    vds_rng, _dpos, _rng = instr
+    vds = val_diffs_in(val_diffs, vds_rng)
     machine.mul_accept_val_diffs(vds)
 
 
 def mainloop(program, metadata, machine):
-    instructions, bracket_map = metadata
+    instructions, val_diffs, bracket_map = metadata
     pc = 0
 
     while pc < len(instructions):
         jitdriver.jit_merge_point(
             pc=pc, machine=machine, program=program,
-            instructions=instructions, bracket_map=bracket_map,
+            instructions=instructions, val_diffs=val_diffs, bracket_map=bracket_map,
         )
 
-        kind, vds, dpos, rng = instruction_at(instructions, pc)
-        instr = (vds, dpos, rng)
+        kind, vds_rng, dpos, rng = instruction_at(instructions, pc)
+        instr = (vds_rng, dpos, rng)
         if kind == KIND_SIMPLE_OPS:
-            instruction_simple_ops(pc, program, instr, bracket_map, machine)
+            instruction_simple_ops(pc, program, instr, val_diffs, bracket_map, machine)
         elif kind == KIND_ONE_CHAR:
-            pc = instruction_one_char(pc, program, instr, bracket_map, machine)
+            pc = instruction_one_char(pc, program, instr, val_diffs, bracket_map, machine)
         elif kind == KIND_MULTIPLY:
-            instruction_multiply(pc, program, instr, bracket_map, machine)
+            instruction_multiply(pc, program, instr, val_diffs, bracket_map, machine)
         pc += 1
 
 

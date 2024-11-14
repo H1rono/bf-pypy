@@ -4,16 +4,16 @@ KIND_SIMPLE_OPS = 2
 KIND_MULTIPLY = 3
 
 
-# Instruction: (kind: kind, val_diffs: ValDiffs, dpos: int, position: Position)
-#     where ValDiffs: list[(dpos: int, dval: int)]
-#           Position: (begin, end)
+# Instruction: (kind: kind, vds_rng: ValDiffsPosition, dpos: int, rng: Position)
+#     where ValDiffsPosition: (begin: int, end: int
+#           Position: (begin: int, end: int)
 def one_char(pc):
-    return (KIND_ONE_CHAR, None, 0, (pc, pc + 1))
+    return (KIND_ONE_CHAR, (0, 0), 0, (pc, pc + 1))
 
 
-def simple_ops(val_diffs, dpos, rng):
-    return (KIND_SIMPLE_OPS, val_diffs, dpos, rng)
+def simple_ops(vds_rng, dpos, rng):
+    return (KIND_SIMPLE_OPS, vds_rng, dpos, rng)
 
 
-def multiply(val_diffs, rng):
-    return (KIND_MULTIPLY, val_diffs, 0, rng)
+def multiply(vds_rng, rng):
+    return (KIND_MULTIPLY, vds_rng, 0, rng)
