@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import deque
 
 from . import instruction
 from .tape import DictTape
@@ -6,53 +6,79 @@ from .token import *
 
 
 def parse_simple_ops(tokens):
-    """
-    [INCREMENT, DECREMENT, ADVANCE, DEVANCE]
-    :param tokens: list[(int, char)]
-    :return: (str, list[(int, int)], int, (int, int))
-    """
     raw = []
     tape = DictTape()
     begin, _ = tokens[0]
     end = begin
-    for i, c in tokens:
-        assert c in SIMPLE_OPS
-        end = max(end, i)
-        raw.append(c)
-        if c == INCREMENT:
+    for pc, char in tokens:
+        # assert char in SIMPLE_OPS
+        raw += char
+        end = pc
+        if char == INCREMENT:
             tape.inc_by(1)
-        elif c == DECREMENT:
+        elif char == DECREMENT:
             tape.dec_by(1)
-        elif c == ADVANCE:
+        elif char == ADVANCE:
             tape.advance_by(1)
-        elif c == DEVANCE:
+        elif char == DEVANCE:
             tape.devance_by(1)
-    val_diffs = [(dp, dv) for dp, dv in tape.data.items()]
+    val_diffs = tape.collect_val_diffs()
     dpos = tape.position
-    rng = (begin, end + 1)
-    return ("".join(raw), val_diffs, dpos, rng)
+    return ("".join(raw), val_diffs, dpos, (begin, end + 1))
 
 
-def parse_bracket_map(program, instructions):
-    bracket_map = {}
-    leftstack = []
-    pc = 0
-    for instr in instructions:
-        kind, _vds, _dpos, rng = instr
-        begin, _end = rng
-        code = program[begin]
-        if kind != instruction.KIND_ONE_CHAR or code not in BRACKET:
-            pc += 1
+def parse_one_char(tokens):
+    raw = []
+    instructions = []
+    for pc, char in tokens.enumerate():
+        raw.append(char)
+        instr = instruction.one_char(pc)
+        instructions.append(instr)
+    return raw, instructions
+
+
+def collect_simple_ops(raw):
+    tape = DictTape()
+    for char in raw:
+        # assert char in SIMPLE_OPS
+        if char == INCREMENT:
+            tape.inc_by(1)
+        elif char == DECREMENT:
+            tape.dec_by(1)
+        elif char == ADVANCE:
+            tape.advance_by(1)
+        elif char == DEVANCE:
+            tape.devance_by(1)
+    val_diffs = tape.collect_val_diffs()
+    dpos = tape.position
+    return (val_diffs, dpos)
+
+
+def _parse_simple_ops(raw, one_char_instructions):
+    instructions = []
+    val_diffs = []
+    simple_ops_begin = []
+    for instr in one_char_instructions:
+        # assert kind == instruction.KIND_ONE_CHAR
+        pc, _ = instr[3]
+        char = raw[pc]
+        # assert char in MEMBERS
+        if char in SIMPLE_OPS:
+            if not simple_ops_begin:
+                simple_ops_begin.append(pc)
             continue
-        if code == LOOP_BEGIN:
-            leftstack.append(pc)
-        else: # code == LOOP_END
-            left = leftstack.pop()
-            right = pc
-            bracket_map[left] = right
-            bracket_map[right] = left
-        pc += 1
-    return bracket_map
+        if simple_ops_begin:
+            left = simple_ops_begin.pop()
+            right = pc + 1
+            vds, dpos = collect_simple_ops(raw[left:right])
+            vds_begin = len(val_diffs)
+            val_diffs.extend(vds)
+            vds_end = len(val_diffs)
+            vds_rng = (vds_begin, vds_end)
+            simple_ops_instr = instruction.simple_ops(vds_rng, dpos, (left, right))
+            instructions.append(simple_ops_instr)
+        instructions.append(instr)
+    return (instructions, val_diffs)
 
 
 def parse_loop_to_multiply(val_diffs, begin, body, end):
@@ -78,6 +104,28 @@ def parse_loop_to_multiply(val_diffs, begin, body, end):
     val_diffs = [(dp, dv) for dp, dv in tape.data.items()]
     rng = (begin_i, end_i)
     return (raw, val_diffs, rng)
+
+
+def parse_bracket_map(program, instructions):
+    bracket_map = {}
+    leftstack = []
+    pc = 0
+    for instr in instructions:
+        kind, _vds, _dpos, rng = instr
+        begin, _end = rng
+        code = program[begin]
+        if kind != instruction.KIND_ONE_CHAR or code not in BRACKET:
+            pc += 1
+            continue
+        if code == LOOP_BEGIN:
+            leftstack.append(pc)
+        else: # code == LOOP_END
+            left = leftstack.pop()
+            right = pc
+            bracket_map[left] = right
+            bracket_map[right] = left
+        pc += 1
+    return bracket_map
 
 
 def parse(tokens):
