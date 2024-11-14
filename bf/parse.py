@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 from . import instruction
 from .token import *
 
@@ -67,7 +69,7 @@ def parse_loop_to_multiply(begin, body, end):
             val_diffs_acc[pos] = val_diffs_acc.get(pos, 0) + dv
         dpos_acc += dpos
         raw_acc += r
-    if dpos_acc != 0:
+    if dpos_acc != 0 or val_diffs_acc[0] != -1:
         return None
     begin_raw, begin_instr = begin
     begin_i, _ = begin_instr[-1]
@@ -116,3 +118,33 @@ def parse(tokens):
     bracket_map = parse_bracket_map(raw, instructions)
     metadata = (instructions, bracket_map)
     return (raw, metadata)
+
+
+def main(argv):
+    try:
+        filename = argv[1]
+    except IndexError:
+        print "You must supply a filename"
+        return 1
+
+    with open(filename) as fp:
+        program, metadata = parse(Tokens(fp))
+    instructions, bracket_map = metadata
+    print "bracket_map:", bracket_map
+    print "instructions:"
+    for instr in instructions:
+        kind, vds, dpos, rng = instr
+        begin, end = rng
+        prg = program[begin:end]
+        if kind == instruction.KIND_ONE_CHAR:
+            print "\t%s\t%d:%d" % (prg, begin, end)
+        elif kind == instruction.KIND_SIMPLE_OPS:
+            print "\t%s %d:%d" % (prg, begin, end), vds
+        elif kind == instruction.KIND_MULTIPLY:
+            print "\t%s %d:%d" % (prg, begin, end), vds
+    return 0
+
+
+if __name__ == "__main__":
+    from sys import argv
+    main(argv)
