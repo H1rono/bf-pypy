@@ -5,7 +5,7 @@ from .tape import DictTape
 from .token import *
 
 
-def parse_simple(tokens):
+def parse_simple_ops(tokens):
     """
     [INCREMENT, DECREMENT, ADVANCE, DEVANCE]
     :param tokens: list[(int, char)]
@@ -16,7 +16,7 @@ def parse_simple(tokens):
     begin, _ = tokens[0]
     end = begin
     for i, c in tokens:
-        assert c in SIMPLES
+        assert c in SIMPLE_OPS
         end = max(end, i)
         raw.append(c)
         if c == INCREMENT:
@@ -82,17 +82,17 @@ def parse_loop_to_multiply(val_diffs, begin, body, end):
 
 def parse(tokens):
     parsed = []
-    simple = []
+    simple_ops = []
     loop_begin_stack = []
     val_diffs = []
     for pc, char in tokens.enumerate():
         # assert char in MEMBERS
-        if char in SIMPLES:
-            simple.append((pc, char))
+        if char in SIMPLE_OPS:
+            simple_ops.append((pc, char))
             continue
-        if simple:
-            raw, vds, dp, rng = parse_simple(simple)
-            simple = []
+        if simple_ops:
+            raw, vds, dp, rng = parse_simple_ops(simple_ops)
+            simple_ops = []
             vds_begin = len(val_diffs)
             val_diffs.extend(vds)
             vds_end = len(val_diffs)

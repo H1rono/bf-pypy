@@ -4,9 +4,9 @@ KIND_SIMPLE_OPS = 2
 KIND_MULTIPLY = 3
 
 
-# Instruction: (kind: kind, vds_rng: ValDiffsPosition, dpos: int, rng: Position)
-#     where ValDiffsPosition: (begin: int, end: int
-#           Position: (begin: int, end: int)
+# Instruction(kind: kind, vds_rng: ValDiffsPosition, dpos: int, rng: Position)
+#     where ValDiffsPosition(begin: int, end: int)
+#           Position(begin: int, end: int)
 def one_char(pc):
     return (KIND_ONE_CHAR, (0, 0), 0, (pc, pc + 1))
 
