@@ -127,17 +127,24 @@ def main(argv):
         program, metadata = parse(Tokens(fp))
     instructions, bracket_map = metadata
     print "bracket_map:", bracket_map
+    instruction_one_char = 0
+    instruction_simple_ops = 0
+    instruction_multiply = 0
     print "instructions:"
     for instr in instructions:
         kind, vds, dpos, rng = instr
         begin, end = rng
         prg = program[begin:end]
         if kind == instruction.KIND_ONE_CHAR:
+            instruction_one_char += 1
             print "\t%s\t%d:%d" % (prg, begin, end)
         elif kind == instruction.KIND_SIMPLE_OPS:
-            print "\t%s %d:%d" % (prg, begin, end), vds
+            instruction_simple_ops += 1
+            print "\t%s %d:%d" % (prg, begin, end), vds, dpos
         elif kind == instruction.KIND_MULTIPLY:
+            instruction_multiply += 1
             print "\t%s %d:%d" % (prg, begin, end), vds
+    print "ONE_CHAR: %d, SIMPLE_OPS: %d, MULTIPLY: %d" % (instruction_one_char, instruction_simple_ops, instruction_multiply)
     return 0
 
 
