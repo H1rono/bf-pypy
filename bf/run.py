@@ -1,17 +1,7 @@
 import os
 import sys
 
-# So that you can still run this module under standard CPython, I add this
-# import guard that creates a dummy class instead.
-try:
-    from rpython.rlib.jit import JitDriver
-except ImportError:
-    class JitDriver(object):
-        def __init__(self, **kw): pass
-
-        def jit_merge_point(self, **kw): pass
-
-        def can_enter_jit(self, **kw): pass
+from rpython.rlib import jit
 
 from .instruction import KIND_ONE_CHAR, KIND_MULTIPLY, KIND_SIMPLE_OPS
 from .machine import Machine
@@ -20,14 +10,14 @@ from .token import *
 
 
 def get_location(pc, program, instructions, bracket_map):
-    _, _, _, pos = instructions[pc]
-    begin, end = pos
+    _, _, _, rng = instructions[pc]
+    begin, end = rng
     return "%s_%s_%s" % (
         program[:begin], program[begin:end], program[end:]
     )
 
 
-jitdriver = JitDriver(
+jitdriver = jit.JitDriver(
     greens=['pc', 'program', 'instructions', 'bracket_map'],
     reds=['machine'],
     get_printable_location=get_location,
