@@ -110,8 +110,9 @@ def entry_point(argv):
 
     with open(filename) as fp:
         program, metadata = parse(Tokens(fp))
-    with os.fdopen(0, 'r') as stdin, os.fdopen(1, 'w') as stdout:
-        run(program, metadata, stdin, stdout)
+    stdin = os.fdopen(0, 'r')
+    stdout = os.fdopen(1, 'w')
+    run(program, metadata, stdin, stdout)
     return 0
 
 
