@@ -9,16 +9,16 @@ from .parse import parse
 from .token import *
 
 
-def get_location(pc, program, instructions, val_diffs, bracket_map):
-    _, _, _, rng = instructions[pc]
-    begin, end = rng
+def get_location(i, program, instructions, val_diffs, bracket_map):
+    _, _, _, pc_rng = instructions[i]
+    begin, end = pc_rng
     return "%s_%s_%s" % (
         program[:begin], program[begin:end], program[end:]
     )
 
 
 jitdriver = jit.JitDriver(
-    greens=['pc', 'program', 'instructions', 'val_diffs', 'bracket_map'],
+    greens=['i', 'program', 'instructions', 'val_diffs', 'bracket_map'],
     reds=['machine'],
     get_printable_location=get_location,
 )
@@ -37,9 +37,9 @@ def corresponding_bracket(map, i):
     return map[i]
 
 
-def instruction_one_char(pc, program, instr, _val_diffs, bracket_map, machine):
-    _vds, _dpos, rng = instr
-    begin, _end = rng
+def instruction_one_char(i, program, instr, _val_diffs, bracket_map, machine):
+    _vds, _dpos, pc_rng = instr
+    begin, _end = pc_rng
     code = program[begin]
     if code == ADVANCE:
         machine.advance_by(1)
@@ -55,45 +55,45 @@ def instruction_one_char(pc, program, instr, _val_diffs, bracket_map, machine):
         machine.read()
     elif code == LOOP_BEGIN and machine.get() == 0:
         # Skip forward to the matching ]
-        return corresponding_bracket(bracket_map, pc)
+        return corresponding_bracket(bracket_map, i)
     elif code == LOOP_END and machine.get() != 0:
         # Skip back to the matching [
-        return corresponding_bracket(bracket_map, pc)
-    return pc
+        return corresponding_bracket(bracket_map, i)
+    return i
 
 
-def instruction_simple_ops(_pc, _program, instr, val_diffs, _bracket_map, machine):
-    vds_rng, dpos, _rng = instr
+def instruction_simple_ops(_i, _program, instr, val_diffs, _bracket_map, machine):
+    vds_rng, dpos, _pc_rng = instr
     vds = val_diffs_in(val_diffs, vds_rng)
     machine.accept_val_diffs(vds)
     machine.advance_by(dpos)
 
 
-def instruction_multiply(_pc, _program, instr, val_diffs, _bracket_map, machine):
-    vds_rng, _dpos, _rng = instr
+def instruction_multiply(_i, _program, instr, val_diffs, _bracket_map, machine):
+    vds_rng, _dpos, _pc_rng = instr
     vds = val_diffs_in(val_diffs, vds_rng)
     machine.mul_accept_val_diffs(vds)
 
 
 def mainloop(program, metadata, machine):
     instructions, val_diffs, bracket_map = metadata
-    pc = 0
+    i = 0
 
-    while pc < len(instructions):
+    while i < len(instructions):
         jitdriver.jit_merge_point(
-            pc=pc, machine=machine, program=program,
+            i=i, machine=machine, program=program,
             instructions=instructions, val_diffs=val_diffs, bracket_map=bracket_map,
         )
 
-        kind, vds_rng, dpos, rng = instruction_at(instructions, pc)
-        instr = (vds_rng, dpos, rng)
+        kind, rng, dpos, pc_rng = instruction_at(instructions, i)
+        instr = (rng, dpos, pc_rng)
         if kind == KIND_SIMPLE_OPS:
-            instruction_simple_ops(pc, program, instr, val_diffs, bracket_map, machine)
+            instruction_simple_ops(i, program, instr, val_diffs, bracket_map, machine)
         elif kind == KIND_ONE_CHAR:
-            pc = instruction_one_char(pc, program, instr, val_diffs, bracket_map, machine)
+            i = instruction_one_char(i, program, instr, val_diffs, bracket_map, machine)
         elif kind == KIND_MULTIPLY:
-            instruction_multiply(pc, program, instr, val_diffs, bracket_map, machine)
-        pc += 1
+            instruction_multiply(i, program, instr, val_diffs, bracket_map, machine)
+        i += 1
 
 
 def run(program, metadata, stdin, stdout):
