@@ -2,6 +2,8 @@ import os
 import sys
 
 from rpython.rlib import jit
+from rpython.rlib.objectmodel import always_inline, enforceargs, try_inline
+from rpython.rlib.rarithmetic import r_uint
 
 from .instruction import KIND_ONE_CHAR, KIND_MULTIPLY, KIND_SIMPLE_OPS
 from .machine import Machine
@@ -37,9 +39,10 @@ def val_diffs_in(val_diffs, rng):
 
 @jit.elidable
 def corresponding_bracket(map, i):
-    return map[i]
+    return r_uint(map[i])
 
 
+@always_inline
 def instruction_one_char(i, program, instr, _val_diffs, bracket_map, machine):
     _rng, _dpos, pc_rng = instr
     begin, _end = pc_rng
@@ -65,6 +68,7 @@ def instruction_one_char(i, program, instr, _val_diffs, bracket_map, machine):
     return i
 
 
+@always_inline
 def instruction_simple_ops(_i, _program, instr, val_diffs, _bracket_map, machine):
     vds_rng, dpos, _pc_rng = instr
     vds = val_diffs_in(val_diffs, vds_rng)
@@ -72,16 +76,17 @@ def instruction_simple_ops(_i, _program, instr, val_diffs, _bracket_map, machine
     machine.tape.advance_by(dpos)
 
 
+@try_inline
 def instruction_multiply(instr, val_diffs, instructions, machine):
     instr_rng, _, _ = instr
     i, instr_end = instr_rng
     mul_by = machine.tape.get()
     if mul_by == 0:
-        return instr_end - 1
+        return r_uint(instr_end - 1)
     while i < instr_end:
         child_instr = instruction_at(instructions, i)
         c_kind, c_rng, c_dpos, c_pc_rng = child_instr
-        assert c_kind != KIND_ONE_CHAR
+        # assert c_kind != KIND_ONE_CHAR
         if c_kind == KIND_SIMPLE_OPS:
             vds = val_diffs_in(val_diffs, c_rng)
             machine.tape.accept_val_diffs_multiplied(vds, mul_by)
@@ -90,14 +95,16 @@ def instruction_multiply(instr, val_diffs, instructions, machine):
             c_instr = (c_rng, c_dpos, c_pc_rng)
             i = instruction_multiply(c_instr, val_diffs, instructions, machine)
         i += 1
-    assert machine.tape.get() == 0
-    return instr_end - 1
+    # assert machine.tape.get() == 0
+    return r_uint(instr_end - 1)
 
 
+@enforceargs(str, None, Machine, typecheck=False)
 def mainloop(program, metadata, machine):
-    instructions, val_diffs, bracket_map = metadata
-    i = 0
+    machine = jit.hint(machine, access_directory=True)
 
+    instructions, val_diffs, bracket_map = metadata
+    i = r_uint(0)
     while i < len(instructions):
         jitdriver.jit_merge_point(
             i=i, machine=machine, program=program,

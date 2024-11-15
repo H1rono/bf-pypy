@@ -1,3 +1,7 @@
+from rpython.rlib.objectmodel import try_inline
+from rpython.rlib.rarithmetic import r_uint
+
+
 class Tape(object):
     def __init__(self):
         self.thetape = [0]
@@ -10,15 +14,19 @@ class Tape(object):
         ])
         return "[%s]" % tape
 
+    @try_inline
     def get(self):
         return self.thetape[self.position]
 
+    @try_inline
     def set(self, val):
         self.thetape[self.position] = val
 
+    @try_inline
     def inc_by(self, diff):
         self.thetape[self.position] += diff
 
+    @try_inline
     def dec_by(self, diff):
         self.thetape[self.position] -= diff
 
@@ -29,6 +37,7 @@ class Tape(object):
             ext = [0] * (self.position - len_tape + 1)
             self.thetape.extend(ext)
 
+    @try_inline
     def devance_by(self, diff):
         self.position -= diff
 
@@ -40,10 +49,12 @@ class Tape(object):
                 self.thetape.extend([0] * (ext_len + 1))
             self.thetape[pos] += dval
 
+    @try_inline
     def accept_val_diffs_multiplied(self, val_diffs, mul_by):
         mul_val_diffs = [(dpos, dval * mul_by) for dpos, dval in val_diffs]
         self.accept_val_diffs(mul_val_diffs)
 
+    @try_inline
     def mul_accept_val_diffs(self, val_diffs):
         self.accept_val_diffs_multiplied(val_diffs, self.get())
         # assert self.get() == 0
