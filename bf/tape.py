@@ -3,6 +3,8 @@ from rpython.rlib.rarithmetic import r_uint
 
 
 class Tape(object):
+    __slots__ = ["thetape", "position"]
+
     def __init__(self):
         self.thetape = [0]
         self.position = 0
@@ -61,6 +63,8 @@ class Tape(object):
 
 
 class DictTape(object):
+    __slots__ = ["data", "position"]
+
     def __init__(self):
         self.data = {}
         self.position = 0

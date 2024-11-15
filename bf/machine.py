@@ -1,12 +1,15 @@
 from os import read, write
 
 from rpython.rlib import jit
+from rpython.rlib.types import instance
 from rpython.rlib.objectmodel import try_inline
 
 from .tape import Tape
 
 
 class Machine(object):
+    __slots__ = ["tape", "stdin", "stdout"]
+
     def __init__(self, stdin, stdout):
         self.tape = jit.hint(Tape(), access_directory=True)
         self.stdin = jit.hint(stdin, access_directory=True)
