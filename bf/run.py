@@ -6,6 +6,7 @@ from rpython.rlib import jit
 from .instruction import KIND_ONE_CHAR, KIND_MULTIPLY, KIND_SIMPLE_OPS
 from .machine import Machine
 from .parse import parse
+from .tape import DictTape
 from .token import *
 
 
@@ -24,21 +25,24 @@ jitdriver = jit.JitDriver(
 )
 
 
+@jit.elidable
 def instruction_at(instructions, i):
     return instructions[i]
 
 
+@jit.elidable
 def val_diffs_in(val_diffs, rng):
     begin, end = rng
     return val_diffs[begin:end]
 
 
+@jit.elidable
 def corresponding_bracket(map, i):
     return map[i]
 
 
 def instruction_one_char(i, program, instr, _val_diffs, bracket_map, machine):
-    _vds, _dpos, pc_rng = instr
+    _rng, _dpos, pc_rng = instr
     begin, _end = pc_rng
     code = program[begin]
     if code == ADVANCE:
@@ -69,10 +73,26 @@ def instruction_simple_ops(_i, _program, instr, val_diffs, _bracket_map, machine
     machine.advance_by(dpos)
 
 
-def instruction_multiply(_i, _program, instr, val_diffs, _bracket_map, machine):
-    vds_rng, _dpos, _pc_rng = instr
-    vds = val_diffs_in(val_diffs, vds_rng)
-    machine.mul_accept_val_diffs(vds)
+def instruction_multiply(instr, val_diffs, instructions, machine):
+    instr_rng, _, _ = instr
+    i, instr_end = instr_rng
+    mul_by = machine.get()
+    if mul_by == 0:
+        return instr_end - 1
+    while i < instr_end:
+        child_instr = instruction_at(instructions, i)
+        c_kind, c_rng, c_dpos, c_pc_rng = child_instr
+        assert c_kind != KIND_ONE_CHAR
+        if c_kind == KIND_SIMPLE_OPS:
+            vds = val_diffs_in(val_diffs, c_rng)
+            machine.accept_val_diffs_multiplied(vds, mul_by)
+            machine.advance_by(c_dpos)
+        elif c_kind == KIND_MULTIPLY:
+            c_instr = (c_rng, c_dpos, c_pc_rng)
+            i = instruction_multiply(c_instr, val_diffs, instructions, machine)
+        i += 1
+    assert machine.get() == 0
+    return instr_end - 1
 
 
 def mainloop(program, metadata, machine):
@@ -92,7 +112,8 @@ def mainloop(program, metadata, machine):
         elif kind == KIND_ONE_CHAR:
             i = instruction_one_char(i, program, instr, val_diffs, bracket_map, machine)
         elif kind == KIND_MULTIPLY:
-            instruction_multiply(i, program, instr, val_diffs, bracket_map, machine)
+            i = instruction_multiply(instr, val_diffs, instructions, machine)
+        print pc_rng, program[pc_rng[0]:pc_rng[1]], machine.position, machine.get()
         i += 1
 
 

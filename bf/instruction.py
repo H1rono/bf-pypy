@@ -17,5 +17,5 @@ def simple_ops(vds_rng, dpos, pc_rng):
     return (KIND_SIMPLE_OPS, vds_rng, dpos, pc_rng)
 
 
-def multiply(vds_rng, pc_rng):
-    return (KIND_MULTIPLY, vds_rng, 0, pc_rng)
+def multiply(instr_rng, pc_rng):
+    return (KIND_MULTIPLY, instr_rng, 0, pc_rng)
