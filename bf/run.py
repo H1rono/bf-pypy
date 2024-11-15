@@ -6,7 +6,6 @@ from rpython.rlib import jit
 from .instruction import KIND_ONE_CHAR, KIND_MULTIPLY, KIND_SIMPLE_OPS
 from .machine import Machine
 from .parse import parse
-from .tape import DictTape
 from .token import *
 
 
@@ -46,21 +45,21 @@ def instruction_one_char(i, program, instr, _val_diffs, bracket_map, machine):
     begin, _end = pc_rng
     code = program[begin]
     if code == ADVANCE:
-        machine.advance_by(1)
+        machine.tape.advance_by(1)
     elif code == DEVANCE:
-        machine.devance_by(1)
+        machine.tape.devance_by(1)
     elif code == INCREMENT:
-        machine.inc_by(1)
+        machine.tape.inc_by(1)
     elif code == DECREMENT:
-        machine.dec_by(1)
+        machine.tape.dec_by(1)
     elif code == WRITE:
         machine.write()
     elif code == READ:
         machine.read()
-    elif code == LOOP_BEGIN and machine.get() == 0:
+    elif code == LOOP_BEGIN and machine.tape.get() == 0:
         # Skip forward to the matching ]
         return corresponding_bracket(bracket_map, i)
-    elif code == LOOP_END and machine.get() != 0:
+    elif code == LOOP_END and machine.tape.get() != 0:
         # Skip back to the matching [
         return corresponding_bracket(bracket_map, i)
     return i
@@ -69,14 +68,14 @@ def instruction_one_char(i, program, instr, _val_diffs, bracket_map, machine):
 def instruction_simple_ops(_i, _program, instr, val_diffs, _bracket_map, machine):
     vds_rng, dpos, _pc_rng = instr
     vds = val_diffs_in(val_diffs, vds_rng)
-    machine.accept_val_diffs(vds)
-    machine.advance_by(dpos)
+    machine.tape.accept_val_diffs(vds)
+    machine.tape.advance_by(dpos)
 
 
 def instruction_multiply(instr, val_diffs, instructions, machine):
     instr_rng, _, _ = instr
     i, instr_end = instr_rng
-    mul_by = machine.get()
+    mul_by = machine.tape.get()
     if mul_by == 0:
         return instr_end - 1
     while i < instr_end:
@@ -85,13 +84,13 @@ def instruction_multiply(instr, val_diffs, instructions, machine):
         assert c_kind != KIND_ONE_CHAR
         if c_kind == KIND_SIMPLE_OPS:
             vds = val_diffs_in(val_diffs, c_rng)
-            machine.accept_val_diffs_multiplied(vds, mul_by)
-            machine.advance_by(c_dpos)
+            machine.tape.accept_val_diffs_multiplied(vds, mul_by)
+            machine.tape.advance_by(c_dpos)
         elif c_kind == KIND_MULTIPLY:
             c_instr = (c_rng, c_dpos, c_pc_rng)
             i = instruction_multiply(c_instr, val_diffs, instructions, machine)
         i += 1
-    assert machine.get() == 0
+    assert machine.tape.get() == 0
     return instr_end - 1
 
 
