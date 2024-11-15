@@ -1,5 +1,6 @@
-from rpython.annotator.model import SomeInteger, SomeTuple
 from rpython.rlib import types
+from rpython.annotator.listdef import ListDef
+from rpython.annotator.model import SomeInteger, SomeList, SomeTuple
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.signature import signature
 
@@ -13,6 +14,8 @@ KIND_MULTIPLY = r_uint(3)
 s_uint = SomeInteger(knowntype=r_uint)
 s_rng = SomeTuple((s_uint, s_uint))
 s_instruction = SomeTuple((s_uint, s_rng, types.int(), s_rng))
+s_instruction_body = SomeTuple((s_rng, types.int(), s_rng))
+s_instructions = SomeList(ListDef(None, s_instruction, mutated=False, resized=False))
 
 
 # Instruction(kind: kind, rng: Position, dpos: int, pc_rng: Position)

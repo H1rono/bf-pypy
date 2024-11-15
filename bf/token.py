@@ -1,5 +1,8 @@
 from os import read
 
+from rpython.rlib import types
+from rpython.rlib.signature import signature
+
 
 INCREMENT = "+"
 DECREMENT = "-"
@@ -50,3 +53,7 @@ class Enumerate(object):
         i = self._i
         self._i += 1
         return (i, t)
+
+
+s_tokens = types.instance(Tokens)
+s_enumerate = types.instance(Enumerate)

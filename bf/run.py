@@ -1,13 +1,19 @@
 import os
 import sys
 
-from rpython.rlib import jit
+from instruction import s_rng
+from rpython.rlib import jit, types
+from rpython.annotator.model import SomeTuple
 from rpython.rlib.objectmodel import always_inline, enforceargs, try_inline
 from rpython.rlib.rarithmetic import r_uint
+from rpython.rlib.signature import signature
 
-from .instruction import KIND_ONE_CHAR, KIND_MULTIPLY, KIND_SIMPLE_OPS
-from .machine import Machine
-from .parse import parse
+from .instruction import (
+    s_uint, s_instruction, s_instruction_body, s_instructions,
+    KIND_ONE_CHAR, KIND_MULTIPLY, KIND_SIMPLE_OPS
+)
+from .machine import Machine, s_machine
+from .parse import parse, s_bracket_map, s_val_diffs, s_metadata
 from .token import *
 
 
@@ -27,22 +33,29 @@ jitdriver = jit.JitDriver(
 
 
 @jit.elidable
+@signature(s_instructions, s_uint, returns=s_instruction)
 def instruction_at(instructions, i):
     return instructions[i]
 
 
 @jit.elidable
+@signature(s_val_diffs, s_rng, returns=s_uint)
 def val_diffs_in(val_diffs, rng):
     begin, end = rng
     return val_diffs[begin:end]
 
 
 @jit.elidable
+@signature(s_bracket_map, s_uint, returns=s_uint)
 def corresponding_bracket(map, i):
-    return r_uint(map[i])
+    return map[i]
 
 
 @always_inline
+@signature(
+    s_uint, types.str(), s_instruction_body, s_val_diffs, s_bracket_map, s_machine,
+    returns=s_uint
+)
 def instruction_one_char(i, program, instr, _val_diffs, bracket_map, machine):
     _rng, _dpos, pc_rng = instr
     begin, _end = pc_rng
@@ -69,6 +82,10 @@ def instruction_one_char(i, program, instr, _val_diffs, bracket_map, machine):
 
 
 @always_inline
+@signature(
+    s_uint, types.str(), s_instruction_body, s_val_diffs, s_bracket_map, s_machine,
+    returns=types.none()
+)
 def instruction_simple_ops(_i, _program, instr, val_diffs, _bracket_map, machine):
     vds_rng, dpos, _pc_rng = instr
     vds = val_diffs_in(val_diffs, vds_rng)
@@ -77,6 +94,10 @@ def instruction_simple_ops(_i, _program, instr, val_diffs, _bracket_map, machine
 
 
 @try_inline
+@signature(
+    s_instruction_body, s_val_diffs, s_instructions, s_machine,
+    returns=s_uint,
+)
 def instruction_multiply(instr, val_diffs, instructions, machine):
     instr_rng, _, _ = instr
     i, instr_end = instr_rng
@@ -99,7 +120,7 @@ def instruction_multiply(instr, val_diffs, instructions, machine):
     return r_uint(instr_end - 1)
 
 
-@enforceargs(str, None, Machine, typecheck=False)
+@signature(types.str(), s_metadata, s_machine, returns=types.none())
 def mainloop(program, metadata, machine):
     machine = jit.hint(machine, access_directory=True)
 

@@ -1,10 +1,22 @@
+from rpython.annotator import model, dictdef, listdef
+from rpython.rlib import types
 from rpython.rlib.rarithmetic import r_uint
+from rpython.rlib.signature import signature
 
 from . import instruction
+from .instruction import s_uint, s_rng, s_instruction, s_instructions
 from .tape import DictTape
 from .token import *
 
 
+s_val_diffs_item = model.SomeTuple((types.int(), types.int()))
+s_val_diffs = model.SomeList(listdef.ListDef(None, s_val_diffs_item))
+s_bracket_map = types.dict(s_uint, s_uint)
+s_metadata = model.SomeTuple((s_instructions, s_val_diffs, s_bracket_map))
+s_parse_result = model.SomeTuple((types.str(), s_metadata))
+
+
+@signature(s_tokens, returns=model.SomeTuple((types.str(), s_instructions)))
 def parse_one_char(tokens):
     raw = []
     instructions = []
@@ -15,6 +27,7 @@ def parse_one_char(tokens):
     return "".join(raw), instructions
 
 
+@signature(types.str(), returns=model.SomeTuple((s_val_diffs, types.int())))
 def collect_simple_ops(raw):
     tape = DictTape()
     for char in raw:
@@ -32,6 +45,7 @@ def collect_simple_ops(raw):
     return (val_diffs, dpos)
 
 
+@signature(types.str(), s_instructions, returns=model.SomeTuple((s_instructions, s_val_diffs)))
 def parse_simple_ops(raw, one_char_instructions):
     instructions = []
     val_diffs = []
@@ -57,9 +71,14 @@ def parse_simple_ops(raw, one_char_instructions):
             simple_ops_instr = instruction.simple_ops(vds_rng, dpos, (left, right))
             instructions.append(simple_ops_instr)
         instructions.append(instr)
-    return (instructions, val_diffs)
+    # workaround to pass translation with this @signature
+    return ([i for i in instructions], [vd for vd in val_diffs])
 
 
+# @signature(
+#     types.str(), s_instructions, s_val_diffs,
+#     returns=types.instance(DictTape, can_be_None=True),
+# )
 def emulate_multiply(raw, body_instructions, val_diffs):
     i = 0
     tape = DictTape()
@@ -90,6 +109,10 @@ def emulate_multiply(raw, body_instructions, val_diffs):
     return tape
 
 
+# @signature(
+#     types.str(), s_instruction, s_instructions, s_instruction, s_val_diffs,
+#     returns=model.SomeTuple((s_rng, types.bool())),
+# )
 def collect_multiply(raw, begin_instr, body_instructions, end_instr, val_diffs):
     tape = emulate_multiply(raw, body_instructions, val_diffs)
     if tape is None or tape.position != 0 or tape.data.get(0, 0) != -1:
@@ -101,6 +124,7 @@ def collect_multiply(raw, begin_instr, body_instructions, end_instr, val_diffs):
     return ((pc_begin, pc_end), True)
 
 
+@signature(types.str(), s_instructions, s_val_diffs, returns=s_instructions)
 def parse_multiply(raw, simple_ops_instructions, val_diffs):
     instructions = []
     loop_begin_stack = []
@@ -137,9 +161,11 @@ def parse_multiply(raw, simple_ops_instructions, val_diffs):
         else:
             instructions.append(end_instr)
     assert not loop_begin_stack
-    return instructions
+    # workaround to pass translation with this @signature
+    return [i for i in instructions]
 
 
+@signature(types.str(), s_instructions, returns=s_bracket_map)
 def parse_bracket_map(raw, instructions):
     bracket_map = {}
     leftstack = []
@@ -162,6 +188,7 @@ def parse_bracket_map(raw, instructions):
     return bracket_map
 
 
+@signature(s_tokens, returns=s_parse_result)
 def parse(tokens):
     raw, one_char_instructions = parse_one_char(tokens)
     simple_ops_instructions, val_diffs = parse_simple_ops(raw, one_char_instructions)

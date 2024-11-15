@@ -1,3 +1,4 @@
+from rpython.rlib import types
 from rpython.rlib.objectmodel import try_inline
 from rpython.rlib.rarithmetic import r_uint
 
@@ -105,3 +106,7 @@ class DictTape(object):
 
     def collect_val_diffs(self):
         return [(dp, dv) for dp, dv in self.data.items()]
+
+
+s_tape = types.instance(Tape)
+s_dict_tape = types.instance(DictTape)

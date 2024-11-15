@@ -26,3 +26,6 @@ class Machine(object):
         buf = chr(self.tape.get())
         # write(self.stdout, buf)
         self.stdout.write(buf)
+
+
+s_machine = instance(Machine)
