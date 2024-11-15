@@ -2,6 +2,8 @@
 
 set -eu -o pipefail
 
+mkdir -p "$PWD/tmp/usession"
+
 USER_SITE="$(pypy -c 'import site; print site.USER_SITE')"
 mkdir -p "$USER_SITE"
 cat - << EOF > "$USER_SITE/pypy.pth"
