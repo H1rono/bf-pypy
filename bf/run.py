@@ -60,15 +60,8 @@ def instruction_one_char(i, program, instr, _val_diffs, bracket_map, machine):
     _rng, _dpos, pc_rng = instr
     begin, _end = pc_rng
     code = program[begin]
-    if code == ADVANCE:
-        machine.tape.advance_by(1)
-    elif code == DEVANCE:
-        machine.tape.devance_by(1)
-    elif code == INCREMENT:
-        machine.tape.inc_by(1)
-    elif code == DECREMENT:
-        machine.tape.dec_by(1)
-    elif code == WRITE:
+    # assert code not in SIMPLE_OPS
+    if code == WRITE:
         machine.write()
     elif code == READ:
         machine.read()
