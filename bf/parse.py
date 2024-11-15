@@ -60,23 +60,39 @@ def parse_simple_ops(raw, one_char_instructions):
     return (instructions, val_diffs)
 
 
-def collect_multiply(raw, begin_instr, body_instructions, end_instr, val_diffs):
+def emulate_multiply(raw, body_instructions, val_diffs):
     i = 0
     tape = DictTape()
     while i < len(body_instructions):
         instr = body_instructions[i]
         kind, rng, dpos, pc_rng = instr
         if kind == instruction.KIND_ONE_CHAR:
-            return ((0, 0), False)
+            return None
         elif kind == instruction.KIND_MULTIPLY:
-            nest_instr_begin, nest_instr_end = rng
-            i += nest_instr_end - nest_instr_begin
-        else:
+            instr_begin = i + 1
+            instr_end = max(rng[1] - rng[0], 0) + instr_begin
+            child_tape = emulate_multiply(raw, body_instructions[instr_begin:instr_end], val_diffs)
+            if child_tape is None:
+                return None
+            for dp, dv in child_tape.data.items():
+                pos = dp + tape.position
+                if pos in tape.data:
+                    return None
+                tape.data[pos] = dv
+            i = max(instr_end - 1, 0)
+        else: # kind == instruction.KIND_SIMPLE_OPS
             vds_begin, vds_end = rng
             tape.accept_val_diffs(val_diffs[vds_begin:vds_end])
             tape.position += dpos
         i += 1
-    if tape.position != 0 or tape.data.get(0, 0) != -1:
+    if tape.position != 0:
+        return None
+    return tape
+
+
+def collect_multiply(raw, begin_instr, body_instructions, end_instr, val_diffs):
+    tape = emulate_multiply(raw, body_instructions, val_diffs)
+    if tape is None or tape.position != 0 or tape.data.get(0, 0) != -1:
         return ((0, 0), False)
     _, _, _, begin_pc_rng = begin_instr
     pc_begin, _ = begin_pc_rng

@@ -113,7 +113,6 @@ def mainloop(program, metadata, machine):
             i = instruction_one_char(i, program, instr, val_diffs, bracket_map, machine)
         elif kind == KIND_MULTIPLY:
             i = instruction_multiply(instr, val_diffs, instructions, machine)
-        print pc_rng, program[pc_rng[0]:pc_rng[1]], machine.position, machine.get()
         i += 1
 
 
