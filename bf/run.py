@@ -39,7 +39,7 @@ def instruction_at(instructions, i):
 
 
 @jit.elidable
-@signature(s_val_diffs, s_rng, returns=s_uint)
+@signature(s_val_diffs, s_rng, returns=s_val_diffs)
 def val_diffs_in(val_diffs, rng):
     begin, end = rng
     return val_diffs[begin:end]
@@ -53,10 +53,10 @@ def corresponding_bracket(map, i):
 
 @always_inline
 @signature(
-    s_uint, types.str(), s_instruction_body, s_val_diffs, s_bracket_map, s_machine,
+    s_uint, types.str(), s_instruction_body, s_bracket_map, s_machine,
     returns=s_uint
 )
-def instruction_one_char(i, program, instr, _val_diffs, bracket_map, machine):
+def instruction_one_char(i, program, instr, bracket_map, machine):
     _rng, _dpos, pc_rng = instr
     begin, _end = pc_rng
     code = program[begin]
@@ -76,10 +76,10 @@ def instruction_one_char(i, program, instr, _val_diffs, bracket_map, machine):
 
 @always_inline
 @signature(
-    s_uint, types.str(), s_instruction_body, s_val_diffs, s_bracket_map, s_machine,
+    s_instruction_body, s_val_diffs, s_machine,
     returns=types.none()
 )
-def instruction_simple_ops(_i, _program, instr, val_diffs, _bracket_map, machine):
+def instruction_simple_ops(instr, val_diffs, machine):
     vds_rng, dpos, _pc_rng = instr
     vds = val_diffs_in(val_diffs, vds_rng)
     machine.tape.accept_val_diffs(vds)
@@ -128,9 +128,9 @@ def mainloop(program, metadata, machine):
         kind, rng, dpos, pc_rng = instruction_at(instructions, i)
         instr = (rng, dpos, pc_rng)
         if kind == KIND_SIMPLE_OPS:
-            instruction_simple_ops(i, program, instr, val_diffs, bracket_map, machine)
+            instruction_simple_ops(instr, val_diffs, machine)
         elif kind == KIND_ONE_CHAR:
-            i = instruction_one_char(i, program, instr, val_diffs, bracket_map, machine)
+            i = instruction_one_char(i, program, instr, bracket_map, machine)
         elif kind == KIND_MULTIPLY:
             i = instruction_multiply(instr, val_diffs, instructions, machine)
         i += 1

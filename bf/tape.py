@@ -35,9 +35,9 @@ class Tape(object):
 
     def advance_by(self, pos_diff):
         self.position += pos_diff
-        len_tape = len(self.thetape)
-        if len_tape <= self.position:
-            ext = [0] * (self.position - len_tape + 1)
+        ext_len = self.position - len(self.thetape)
+        if ext_len >= 0:
+            ext = [0] * (ext_len + 1)
             self.thetape.extend(ext)
 
     @try_inline

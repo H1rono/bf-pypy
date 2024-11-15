@@ -87,23 +87,24 @@ def emulate_multiply(raw, body_instructions, val_diffs):
         kind, rng, dpos, pc_rng = instr
         if kind == instruction.KIND_ONE_CHAR:
             return None
-        elif kind == instruction.KIND_MULTIPLY:
-            instr_begin = i + 1
-            instr_end = r_uint(rng[1] - rng[0]) + instr_begin
-            child_tape = emulate_multiply(raw, body_instructions[instr_begin:instr_end], val_diffs)
-            if child_tape is None:
-                return None
-            for dp, dv in child_tape.data.items():
-                pos = dp + tape.position
-                if pos in tape.data:
-                    return None
-                tape.data[pos] = dv
-            i = r_uint(instr_end - 1)
-        else: # kind == instruction.KIND_SIMPLE_OPS
+        elif kind == instruction.KIND_SIMPLE_OPS:
             vds_begin, vds_end = rng
             tape.accept_val_diffs(val_diffs[vds_begin:vds_end])
             tape.position += dpos
-        i += 1
+            i += 1
+            continue
+        # kind == instruction.KIND_MULTIPLY
+        instr_begin = i + 1
+        instr_end = r_uint(rng[1] - rng[0]) + instr_begin
+        child_tape = emulate_multiply(raw, body_instructions[instr_begin:instr_end], val_diffs)
+        if child_tape is None:
+            return None
+        for dp, dv in child_tape.data.items():
+            pos = dp + tape.position
+            if pos in tape.data:
+                return None
+            tape.data[pos] = dv
+        i = instr_end
     if tape.position != 0:
         return None
     return tape
