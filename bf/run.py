@@ -95,9 +95,14 @@ def instruction_multiply(instr, val_diffs, instructions, machine):
     instr_rng, _, _ = instr
     i, instr_end = instr_rng
     mul_by = machine.tape.get()
+    nests = []
     if mul_by == 0:
         return r_uint(instr_end - 1)
-    while i < instr_end:
+    while True:
+        if i >= instr_end:
+            if not nests:
+                break
+            instr_end, mul_by = nests.pop()
         child_instr = instruction_at(instructions, i)
         c_kind, c_rng, c_dpos, c_pc_rng = child_instr
         # assert c_kind != KIND_ONE_CHAR
@@ -105,10 +110,11 @@ def instruction_multiply(instr, val_diffs, instructions, machine):
             vds = val_diffs_in(val_diffs, c_rng)
             machine.tape.accept_val_diffs_multiplied(vds, mul_by)
             machine.tape.advance_by(c_dpos)
-        elif c_kind == KIND_MULTIPLY:
-            c_instr = (c_rng, c_dpos, c_pc_rng)
-            i = instruction_multiply(c_instr, val_diffs, instructions, machine)
-        i += 1
+            i += 1
+        else: # c_kind == KIND_MULTIPLY
+            nests.append((instr_end, mul_by))
+            i, instr_end = c_rng
+            mul_by = machine.tape.get()
     # assert machine.tape.get() == 0
     return r_uint(instr_end - 1)
 
