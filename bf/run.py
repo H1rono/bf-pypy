@@ -21,7 +21,7 @@ def get_location(i, program, instructions, val_diffs, bracket_map):
     _, _, _, pc_rng = instructions[i]
     begin, end = pc_rng
     return "%s_%s_%s" % (
-        program[:begin], program[begin:end], program[end:]
+        program[:begin], program_in(program, pc_rng), program[end:]
     )
 
 
@@ -30,6 +30,12 @@ jitdriver = jit.JitDriver(
     reds=['machine'],
     get_printable_location=get_location,
 )
+
+@jit.elidable
+@signature(types.str(), s_rng, returns=types.str())
+def program_in(program, rng):
+    begin, end = rng
+    return program[begin:end]
 
 
 @jit.elidable
@@ -58,8 +64,7 @@ def corresponding_bracket(map, i):
 )
 def instruction_one_char(i, program, instr, bracket_map, machine):
     _rng, _dpos, pc_rng = instr
-    begin, _end = pc_rng
-    code = program[begin]
+    code = program_in(program, pc_rng)
     # assert code not in SIMPLE_OPS
     if code == WRITE:
         machine.write()
@@ -104,7 +109,7 @@ def instruction_multiply(instr, val_diffs, instructions, machine):
                 break
             instr_end, mul_by = nests.pop()
         child_instr = instruction_at(instructions, i)
-        c_kind, c_rng, c_dpos, c_pc_rng = child_instr
+        c_kind, c_rng, c_dpos, _pc_rng = child_instr
         # assert c_kind != KIND_ONE_CHAR
         if c_kind == KIND_SIMPLE_OPS:
             vds = val_diffs_in(val_diffs, c_rng)
