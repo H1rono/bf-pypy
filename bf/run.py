@@ -3,8 +3,7 @@ import sys
 
 from instruction import s_rng
 from rpython.rlib import jit, types
-from rpython.annotator.model import SomeTuple
-from rpython.rlib.objectmodel import always_inline, enforceargs, try_inline
+from rpython.rlib.objectmodel import always_inline, try_inline
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.signature import signature
 
@@ -17,36 +16,7 @@ from .parse import parse, s_bracket_map, s_val_diffs, s_metadata
 from .token import *
 
 
-class Context(object):
-    __slots__ = ["multiply_end", "multiply_by", "multiply_nests"]
-
-    def __init__(self, mul_end, mul_by):
-        self.multiply_end = r_uint(mul_end)
-        self.multiply_by = mul_by
-        self.multiply_nests = []
-
-    @try_inline
-    def nest(self, mul_end, mul_by):
-        p = (self.multiply_end, self.multiply_by)
-        self.multiply_nests.append(p)
-        self.multiply_end = mul_end
-        self.multiply_by = mul_by
-
-    @try_inline
-    def pop(self):
-        if not self.multiply_nests:
-            return
-        mul_end, mul_by = self.multiply_nests.pop()
-        self.multiply_end = mul_end
-        self.multiply_by = mul_by
-
-    @try_inline
-    def proceed_to(self, i):
-        if i >= self.multiply_end:
-            self.pop()
-
-
-def get_location(i, program, instructions, val_diffs, bracket_map):
+def get_location(i, mul_end, mul_by, mul_nests, program, instructions, val_diffs, bracket_map):
     _, _, _, pc_rng = instructions[i]
     begin, end = pc_rng
     return "%s_%s_%s" % (
@@ -55,8 +25,8 @@ def get_location(i, program, instructions, val_diffs, bracket_map):
 
 
 jitdriver = jit.JitDriver(
-    greens=['i', 'program', 'instructions', 'val_diffs', 'bracket_map'],
-    reds=['machine', 'context'],
+    greens=['i', 'mul_end', 'mul_by', 'mul_nests', 'program', 'instructions', 'val_diffs', 'bracket_map'],
+    reds=['machine'],
     get_printable_location=get_location,
 )
 
@@ -113,31 +83,32 @@ def mainloop(program, metadata, machine):
     machine = jit.hint(machine, access_directly=True)
 
     instructions, val_diffs, bracket_map = metadata
-    i = 0
-    context = jit.hint(Context(len(instructions), 1), access_directly=True)
+    i = r_uint(0)
+    mul_end, mul_by, mul_nests = len(instructions), 1, []
     while i < len(instructions):
         jitdriver.jit_merge_point(
-            i=i, machine=machine, program=program,
+            i=i, mul_end=mul_end, mul_by=mul_by, program=program,
             instructions=instructions, val_diffs=val_diffs, bracket_map=bracket_map,
-            context=context
+            machine=machine, mul_nests=mul_nests
         )
 
         kind, rng, dpos, pc_rng = instruction_at(instructions, i)
         if kind == KIND_SIMPLE_OPS:
             vds = val_diffs_in(val_diffs, rng)
-            machine.tape.accept_val_diffs_multiplied(vds, context.multiply_by)
+            machine.tape.accept_val_diffs_multiplied(vds, mul_by)
             machine.tape.advance_by(dpos)
         elif kind == KIND_ONE_CHAR:
             instr = (rng, dpos, pc_rng)
             i = instruction_one_char(i, program, instr, bracket_map, machine)
         else: # kind == KIND_MUlTIPLY
+            mul_nests.append((mul_end, mul_by))
             _, mul_end = rng
             mul_by = machine.tape.get()
-            context.nest(mul_end, mul_by)
             if mul_by == 0:
-                i = mul_end - 1
+                i = r_uint(mul_end - 1)
         i += 1
-        context.proceed_to(i)
+        if i >= mul_end and mul_nests:
+            mul_end, mul_by = mul_nests.pop()
 
 
 def run(program, metadata, stdin, stdout):
