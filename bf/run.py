@@ -17,6 +17,30 @@ from .parse import parse, s_bracket_map, s_val_diffs, s_metadata
 from .token import *
 
 
+class Context(object):
+    def __init__(self, i, mul_end, mul_by):
+        self.index = r_uint(i)
+        self.multiply_end = r_uint(mul_end)
+        self.multiply_by = mul_by
+        self.multiply_nests = []
+
+    @try_inline
+    def nest(self, mul_end, mul_by):
+        p = (self.multiply_end, self.multiply_by)
+        self.multiply_nests.append(p)
+        self.multiply_end = mul_end
+        self.multiply_by = mul_by
+
+    @try_inline
+    def pop(self):
+        if not self.multiply_nests:
+            return False
+        mul_end, mul_by = self.multiply_nests.pop()
+        self.multiply_end = mul_end
+        self.multiply_by = mul_by
+        return True
+
+
 def get_location(i, program, instructions, val_diffs, bracket_map):
     _, _, _, pc_rng = instructions[i]
     begin, end = pc_rng
@@ -99,29 +123,28 @@ def instruction_simple_ops(instr, val_diffs, machine):
 def instruction_multiply(instr, val_diffs, instructions, machine):
     instr_rng, _, _ = instr
     i, instr_end = instr_rng
-    mul_by = machine.tape.get()
-    nests = []
-    if mul_by == 0:
+    context = Context(i, instr_end, machine.tape.get())
+    if context.multiply_by == 0:
         return r_uint(instr_end - 1)
     while True:
-        if i >= instr_end:
-            if not nests:
+        if context.index >= instr_end:
+            if not context.pop():
                 break
-            instr_end, mul_by = nests.pop()
-        child_instr = instruction_at(instructions, i)
+        child_instr = instruction_at(instructions, context.index)
         c_kind, c_rng, c_dpos, _pc_rng = child_instr
         # assert c_kind != KIND_ONE_CHAR
         if c_kind == KIND_SIMPLE_OPS:
             vds = val_diffs_in(val_diffs, c_rng)
-            machine.tape.accept_val_diffs_multiplied(vds, mul_by)
+            machine.tape.accept_val_diffs_multiplied(vds, context.multiply_by)
             machine.tape.advance_by(c_dpos)
-            i += 1
         else: # c_kind == KIND_MULTIPLY
-            nests.append((instr_end, mul_by))
-            i, instr_end = c_rng
+            # nests.append((instr_end, mul_by))
+            _, instr_end = c_rng
             mul_by = machine.tape.get()
+            context.nest(instr_end, mul_by)
+        context.index += 1
     # assert machine.tape.get() == 0
-    return r_uint(instr_end - 1)
+    return r_uint(context.multiply_end - 1)
 
 
 @signature(types.str(), s_metadata, s_machine, returns=types.none())
