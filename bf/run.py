@@ -18,8 +18,9 @@ from .token import *
 
 
 class Context(object):
-    def __init__(self, i, mul_end, mul_by):
-        self.index = r_uint(i)
+    __slots__ = ["multiply_end", "multiply_by", "multiply_nests"]
+
+    def __init__(self, mul_end, mul_by):
         self.multiply_end = r_uint(mul_end)
         self.multiply_by = mul_by
         self.multiply_nests = []
@@ -40,14 +41,13 @@ class Context(object):
         self.multiply_by = mul_by
 
     @try_inline
-    def proceed(self):
-        self.index += 1
-        if self.index >= self.multiply_end:
+    def proceed_to(self, i):
+        if i >= self.multiply_end:
             self.pop()
 
 
-def get_location(context, program, instructions, val_diffs, bracket_map):
-    _, _, _, pc_rng = instructions[context.index]
+def get_location(i, program, instructions, val_diffs, bracket_map):
+    _, _, _, pc_rng = instructions[i]
     begin, end = pc_rng
     return "%s_%s_%s" % (
         program[:begin], program_in(program, pc_rng), program[end:]
@@ -55,8 +55,8 @@ def get_location(context, program, instructions, val_diffs, bracket_map):
 
 
 jitdriver = jit.JitDriver(
-    greens=['context', 'program', 'instructions', 'val_diffs', 'bracket_map'],
-    reds=['machine'],
+    greens=['i', 'program', 'instructions', 'val_diffs', 'bracket_map'],
+    reds=['machine', 'context'],
     get_printable_location=get_location,
 )
 
@@ -110,33 +110,34 @@ def instruction_one_char(i, program, instr, bracket_map, machine):
 
 @signature(types.str(), s_metadata, s_machine, returns=types.none())
 def mainloop(program, metadata, machine):
-    machine = jit.hint(machine, access_directory=True)
+    machine = jit.hint(machine, access_directly=True)
 
     instructions, val_diffs, bracket_map = metadata
-    context = Context(0, len(instructions), 1)
-    while context.index < len(instructions):
+    i = 0
+    context = jit.hint(Context(len(instructions), 1), access_directly=True)
+    while i < len(instructions):
         jitdriver.jit_merge_point(
-            context=context, machine=machine, program=program,
+            i=i, machine=machine, program=program,
             instructions=instructions, val_diffs=val_diffs, bracket_map=bracket_map,
+            context=context
         )
 
-        kind, rng, dpos, pc_rng = instruction_at(instructions, context.index)
+        kind, rng, dpos, pc_rng = instruction_at(instructions, i)
         if kind == KIND_SIMPLE_OPS:
             vds = val_diffs_in(val_diffs, rng)
             machine.tape.accept_val_diffs_multiplied(vds, context.multiply_by)
             machine.tape.advance_by(dpos)
-            # instruction_simple_ops(instr, val_diffs, machine)
         elif kind == KIND_ONE_CHAR:
             instr = (rng, dpos, pc_rng)
-            context.index = instruction_one_char(context.index, program, instr, bracket_map, machine)
+            i = instruction_one_char(i, program, instr, bracket_map, machine)
         else: # kind == KIND_MUlTIPLY
-            i, mul_end = rng
+            _, mul_end = rng
             mul_by = machine.tape.get()
             context.nest(mul_end, mul_by)
             if mul_by == 0:
-                context.index = mul_end - 1
-            # context.index = instruction_multiply(instr, val_diffs, instructions, machine)
-        context.proceed()
+                i = mul_end - 1
+        i += 1
+        context.proceed_to(i)
 
 
 def run(program, metadata, stdin, stdout):
