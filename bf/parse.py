@@ -157,7 +157,7 @@ def parse_multiply(raw, simple_ops_instructions, val_diffs):
             mul_instr_begin = begin_at + 1
             mul_instr_end = len(instructions)
             mul_instr_rng = (mul_instr_begin, mul_instr_end)
-            mul_instr = instruction.multiply(mul_instr_rng, mul_pc_rng)
+            mul_instr = instruction.nest_multiply(mul_instr_rng, mul_pc_rng)
             instructions[begin_at] = mul_instr
         else:
             instructions.append(end_instr)
@@ -227,7 +227,7 @@ def main(argv):
             vds_begin, vds_end = rng
             vds = val_diffs[vds_begin:vds_end]
             print "\t%s %d:%d" % (prg, begin, end), vds, dpos
-        elif kind == instruction.KIND_MULTIPLY:
+        elif kind == instruction.KIND_NEST_MULTIPLY:
             instruction_multiply += 1
             i = rng[1] - 1
             print "\t%s %d:%d %s" % (prg, begin, end, str(rng))

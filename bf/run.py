@@ -3,13 +3,13 @@ import sys
 
 from instruction import s_rng
 from rpython.rlib import jit, types
-from rpython.rlib.objectmodel import always_inline, try_inline
+from rpython.rlib.objectmodel import always_inline
 from rpython.rlib.rarithmetic import r_uint
 from rpython.rlib.signature import signature
 
 from .instruction import (
     s_uint, s_instruction, s_instruction_body, s_instructions,
-    KIND_ONE_CHAR, KIND_MULTIPLY, KIND_SIMPLE_OPS
+    KIND_ONE_CHAR, KIND_NEST_MULTIPLY, KIND_SIMPLE_OPS
 )
 from .machine import Machine, s_machine
 from .parse import parse, s_bracket_map, s_val_diffs, s_metadata

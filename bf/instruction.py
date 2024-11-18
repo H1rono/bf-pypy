@@ -8,7 +8,8 @@ from rpython.rlib.signature import signature
 # instruction kinds
 KIND_ONE_CHAR = r_uint(1)
 KIND_SIMPLE_OPS = r_uint(2)
-KIND_MULTIPLY = r_uint(3)
+KIND_NEST_MULTIPLY = r_uint(3)
+KIND_NEST_LOOP = r_uint(4)
 
 
 s_uint = SomeInteger(knowntype=r_uint)
@@ -35,5 +36,11 @@ def simple_ops(vds_rng, dpos, pc_rng):
 
 # rng: range of child-instructions
 @signature(s_rng, s_rng, returns=s_instruction)
-def multiply(instr_rng, pc_rng):
-    return (KIND_MULTIPLY, instr_rng, 0, pc_rng)
+def nest_multiply(instr_rng, pc_rng):
+    return (KIND_NEST_MULTIPLY, instr_rng, 0, pc_rng)
+
+
+# rng: range of child-instructions
+@signature(s_rng, s_rng, returns=s_instruction)
+def nest_loop(instr_rng, pc_rng):
+    return (KIND_NEST_LOOP, instr_rng, 0, pc_rng)
