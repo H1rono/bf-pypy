@@ -9,14 +9,14 @@ from rpython.rlib.signature import signature
 
 from .instruction import (
     s_uint, s_instruction, s_instruction_body, s_instructions,
-    KIND_ONE_CHAR, KIND_NEST_MULTIPLY, KIND_SIMPLE_OPS
+    KIND_ONE_CHAR, KIND_NEST_LOOP, KIND_NEST_MULTIPLY, KIND_SIMPLE_OPS
 )
 from .machine import Machine, s_machine
 from .parse import parse, s_bracket_map, s_val_diffs, s_metadata
 from .token import *
 
 
-def get_location(i, mul_end, mul_by, mul_nests, program, instructions, val_diffs, bracket_map):
+def get_location(i, nest_rng, mul_by, nests, program, instructions, val_diffs, bracket_map):
     _, _, _, pc_rng = instructions[i]
     begin, end = pc_rng
     return "%s_%s_%s" % (
@@ -25,7 +25,7 @@ def get_location(i, mul_end, mul_by, mul_nests, program, instructions, val_diffs
 
 
 jitdriver = jit.JitDriver(
-    greens=['i', 'mul_end', 'mul_by', 'mul_nests', 'program', 'instructions', 'val_diffs', 'bracket_map'],
+    greens=['i', 'mul_by', 'nest_rng', 'nests', 'program', 'instructions', 'val_diffs', 'bracket_map'],
     reds=['machine'],
     get_printable_location=get_location,
 )
@@ -84,12 +84,14 @@ def mainloop(program, metadata, machine):
 
     instructions, val_diffs, bracket_map = metadata
     i = r_uint(0)
-    mul_end, mul_by, mul_nests = len(instructions), 1, []
+    nest_rng = (0, len(instructions))
+    mul_by = 1
+    nests = []
     while i < len(instructions):
         jitdriver.jit_merge_point(
-            i=i, mul_end=mul_end, mul_by=mul_by, program=program,
+            i=i, mul_by=mul_by, nest_rng=nest_rng, program=program, nests=nests,
             instructions=instructions, val_diffs=val_diffs, bracket_map=bracket_map,
-            machine=machine, mul_nests=mul_nests
+            machine=machine,
         )
 
         kind, rng, dpos, pc_rng = instruction_at(instructions, i)
@@ -100,15 +102,20 @@ def mainloop(program, metadata, machine):
         elif kind == KIND_ONE_CHAR:
             instr = (rng, dpos, pc_rng)
             i = instruction_one_char(i, program, instr, bracket_map, machine)
-        else: # kind == KIND_MUlTIPLY
-            mul_nests.append((mul_end, mul_by))
-            _, mul_end = rng
+        else: # kind in [KIND_NEST_MULTIPLY, KIND_NEST_LOOP]
+            nests.append((nest_rng, mul_by))
+            nest_rng = rng
             mul_by = machine.tape.get()
+            if kind == KIND_NEST_LOOP:
+                mul_by = min(1, mul_by)
             if mul_by == 0:
-                i = r_uint(mul_end - 1)
+                i = r_uint(nest_rng[1] - 1)
         i += 1
-        if i >= mul_end and mul_nests:
-            mul_end, mul_by = mul_nests.pop()
+        if i >= nest_rng[1] and nests: # getting nest loop out
+            if machine.tape.get() == 0:
+                nest_rng, mul_by = nests.pop()
+            else:
+                i = nest_rng[0]
 
 
 def run(program, metadata, stdin, stdout):
