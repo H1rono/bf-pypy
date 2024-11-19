@@ -11,12 +11,8 @@
             "userGid": "1000",
             "upgradePackages": "true"
         },
-        "ghcr.io/devcontainers/features/git:1": {
-            "version": "latest",
-            "ppa": "false"
-        },
         "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
-            "packages": "chromium,build-essential,graphviz,fonts-noto-extra,fonts-noto-mono,fonts-noto-cjk-extra,fonts-noto-color-emoji"
+            "packages": "git,chromium,build-essential,graphviz,fonts-noto-extra,fonts-noto-mono,fonts-noto-cjk-extra,fonts-noto-color-emoji"
         },
         "ghcr.io/devcontainers/features/node:1": {
             "version": "lts",
