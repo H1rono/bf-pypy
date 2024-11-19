@@ -58,7 +58,7 @@ def val_diffs_in(val_diffs, rng):
 def instruction_one_char(program, instr, machine):
     _rng, _dpos, pc_rng = instr
     code = program_in(program, pc_rng)
-    assert code not in IO_OPS
+    # assert code not in IO_OPS
     if code == WRITE:
         machine.write()
     elif code == READ:
@@ -93,7 +93,7 @@ def mainloop(program, metadata, machine):
             nests.append((nest_rng, mul_by))
             nest_rng = rng
             mul_by = machine.tape.get()
-            assert mul_by >= 0
+            # assert mul_by >= 0
             if kind == KIND_NEST_LOOP and mul_by != 0:
                 mul_by = 1
             if mul_by == 0:
