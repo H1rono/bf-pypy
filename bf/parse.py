@@ -12,8 +12,7 @@ from .token import *
 
 s_val_diffs_item = model.SomeTuple((types.int(), types.int()))
 s_val_diffs = model.SomeList(listdef.ListDef(None, s_val_diffs_item))
-s_bracket_map = types.dict(s_uint, s_uint)
-s_metadata = model.SomeTuple((s_instructions, s_val_diffs, s_bracket_map))
+s_metadata = model.SomeTuple((s_instructions, s_val_diffs))
 s_parse_result = model.SomeTuple((types.str(), s_metadata))
 
 
@@ -170,36 +169,12 @@ def parse_nests(raw, simple_ops_instructions, val_diffs):
     return [i for i in instructions]
 
 
-@signature(types.str(), s_instructions, returns=s_bracket_map)
-def parse_bracket_map(raw, instructions):
-    bracket_map = {}
-    leftstack = []
-    pc = 0
-    for instr in instructions:
-        kind, _, _dpos, pc_rng = instr
-        begin, _end = pc_rng
-        code = raw[begin]
-        if kind != instruction.KIND_ONE_CHAR or code not in BRACKET:
-            pc += 1
-            continue
-        if code == LOOP_BEGIN:
-            leftstack.append(pc)
-        else: # code == LOOP_END
-            left = leftstack.pop()
-            right = pc
-            bracket_map[left] = right
-            bracket_map[right] = left
-        pc += 1
-    return bracket_map
-
-
 @signature(s_tokens, returns=s_parse_result)
 def parse(tokens):
     raw, one_char_instructions = parse_one_char(tokens)
     simple_ops_instructions, val_diffs = parse_simple_ops(raw, one_char_instructions)
     nest_instructions = parse_nests(raw, simple_ops_instructions, val_diffs)
-    bracket_map = parse_bracket_map(raw, nest_instructions)
-    metadata = (nest_instructions, val_diffs, bracket_map)
+    metadata = (nest_instructions, val_diffs)
     return (raw, metadata)
 
 
@@ -212,8 +187,7 @@ def main(argv):
 
     with open(filename) as fp:
         program, metadata = parse(Tokens(fp))
-    instructions, val_diffs, bracket_map = metadata
-    print "bracket_map:", bracket_map
+    instructions, val_diffs = metadata
     instruction_one_char = 0
     instruction_simple_ops = 0
     instruction_nest = 0

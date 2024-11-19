@@ -12,11 +12,11 @@ from .instruction import (
     KIND_ONE_CHAR, KIND_NEST_LOOP, KIND_NEST_MULTIPLY, KIND_SIMPLE_OPS
 )
 from .machine import Machine, s_machine
-from .parse import parse, s_bracket_map, s_val_diffs, s_metadata
+from .parse import parse, s_val_diffs, s_metadata
 from .token import *
 
 
-def get_location(i, nest_rng, mul_by, nests, program, instructions, val_diffs, bracket_map):
+def get_location(i, nest_rng, mul_by, nests, program, instructions, val_diffs):
     _, _, _, pc_rng = instructions[i]
     begin, end = pc_rng
     return "%s_%s_%s" % (
@@ -25,7 +25,7 @@ def get_location(i, nest_rng, mul_by, nests, program, instructions, val_diffs, b
 
 
 jitdriver = jit.JitDriver(
-    greens=['i', 'mul_by', 'nest_rng', 'nests', 'program', 'instructions', 'val_diffs', 'bracket_map'],
+    greens=['i', 'mul_by', 'nest_rng', 'nests', 'program', 'instructions', 'val_diffs'],
     reds=['machine'],
     get_printable_location=get_location,
 )
@@ -50,39 +50,26 @@ def val_diffs_in(val_diffs, rng):
     return val_diffs[begin:end]
 
 
-@jit.elidable
-@signature(s_bracket_map, s_uint, returns=s_uint)
-def corresponding_bracket(map, i):
-    return map[i]
-
-
 @always_inline
 @signature(
-    s_uint, types.str(), s_instruction_body, s_bracket_map, s_machine,
-    returns=s_uint
+    types.str(), s_instruction_body, s_machine,
+    returns=types.none()
 )
-def instruction_one_char(i, program, instr, bracket_map, machine):
+def instruction_one_char(program, instr, machine):
     _rng, _dpos, pc_rng = instr
     code = program_in(program, pc_rng)
-    # assert code not in SIMPLE_OPS
+    assert code not in IO_OPS
     if code == WRITE:
         machine.write()
     elif code == READ:
         machine.read()
-    elif code == LOOP_BEGIN and machine.tape.get() == 0:
-        # Skip forward to the matching ]
-        return corresponding_bracket(bracket_map, i)
-    elif code == LOOP_END and machine.tape.get() != 0:
-        # Skip back to the matching [
-        return corresponding_bracket(bracket_map, i)
-    return i
 
 
 @signature(types.str(), s_metadata, s_machine, returns=types.none())
 def mainloop(program, metadata, machine):
     machine = jit.hint(machine, access_directly=True)
 
-    instructions, val_diffs, bracket_map = metadata
+    instructions, val_diffs = metadata
     i = r_uint(0)
     nest_rng = (0, len(instructions))
     mul_by = 1
@@ -90,7 +77,7 @@ def mainloop(program, metadata, machine):
     while i < len(instructions):
         jitdriver.jit_merge_point(
             i=i, mul_by=mul_by, nest_rng=nest_rng, program=program, nests=nests,
-            instructions=instructions, val_diffs=val_diffs, bracket_map=bracket_map,
+            instructions=instructions, val_diffs=val_diffs,
             machine=machine,
         )
 
@@ -101,7 +88,7 @@ def mainloop(program, metadata, machine):
             machine.tape.advance_by(dpos)
         elif kind == KIND_ONE_CHAR:
             # instr = (rng, dpos, pc_rng)
-            i = instruction_one_char(i, program, (rng, dpos, pc_rng), bracket_map, machine)
+            instruction_one_char(program, (rng, dpos, pc_rng), machine)
         else: # kind in [KIND_NEST_MULTIPLY, KIND_NEST_LOOP]
             nests.append((nest_rng, mul_by))
             nest_rng = rng
