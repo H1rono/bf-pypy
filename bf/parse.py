@@ -1,3 +1,4 @@
+from instruction import KIND_NEST_LOOP, KIND_NEST_MULTIPLY
 from rpython.annotator import model, dictdef, listdef
 from rpython.rlib import types
 from rpython.rlib.rarithmetic import r_uint
@@ -112,21 +113,23 @@ def emulate_multiply(raw, body_instructions, val_diffs):
 
 # @signature(
 #     types.str(), s_instruction, s_instructions, s_instruction, s_val_diffs,
-#     returns=model.SomeTuple((s_rng, types.bool())),
+#     returns=model.SomeTuple((s_uint, s_rng)),
 # )
-def collect_multiply(raw, begin_instr, body_instructions, end_instr, val_diffs):
+def collect_nest(raw, begin_instr, body_instructions, end_instr, val_diffs):
     tape = emulate_multiply(raw, body_instructions, val_diffs)
     if tape is None or tape.position != 0 or tape.data.get(0, 0) != -1:
-        return ((0, 0), False)
+        kind = KIND_NEST_LOOP
+    else:
+        kind = KIND_NEST_MULTIPLY
     _, _, _, begin_pc_rng = begin_instr
     pc_begin, _ = begin_pc_rng
     _, _, _, end_pc_rng = end_instr
     _, pc_end = end_pc_rng
-    return ((pc_begin, pc_end), True)
+    return (kind, (pc_begin, pc_end))
 
 
 @signature(types.str(), s_instructions, s_val_diffs, returns=s_instructions)
-def parse_multiply(raw, simple_ops_instructions, val_diffs):
+def parse_nests(raw, simple_ops_instructions, val_diffs):
     instructions = []
     loop_begin_stack = []
     for instr in simple_ops_instructions:
@@ -137,7 +140,7 @@ def parse_multiply(raw, simple_ops_instructions, val_diffs):
         pc, _ = pc_rng
         char = raw[pc]
         if char in IO_OPS:
-            loop_begin_stack = []
+            # loop_begin_stack = []
             instructions.append(instr)
             continue
         elif char == LOOP_BEGIN:
@@ -152,15 +155,16 @@ def parse_multiply(raw, simple_ops_instructions, val_diffs):
         begin_instr = instructions[begin_at]
         body_instructions = instructions[begin_at + 1:]
         end_instr = instr
-        mul_pc_rng, mul_ok = collect_multiply(raw, begin_instr, body_instructions, end_instr, val_diffs)
-        if mul_ok:
-            mul_instr_begin = begin_at + 1
-            mul_instr_end = len(instructions)
-            mul_instr_rng = (mul_instr_begin, mul_instr_end)
-            mul_instr = instruction.nest_multiply(mul_instr_rng, mul_pc_rng)
-            instructions[begin_at] = mul_instr
-        else:
-            instructions.append(end_instr)
+        nest_kind, nest_pc_rng = collect_nest(raw, begin_instr, body_instructions, end_instr, val_diffs)
+        nest_instr_begin = begin_at + 1
+        nest_instr_end = len(instructions)
+        nest_instr_rng = (nest_instr_begin, nest_instr_end)
+        nest_instr = (
+            instruction.nest_multiply(nest_instr_rng, nest_pc_rng)
+            if nest_kind == KIND_NEST_MULTIPLY else
+            instruction.nest_loop(nest_instr_rng, nest_pc_rng)
+        )
+        instructions[begin_at] = nest_instr
     assert not loop_begin_stack
     # workaround to pass translation with this @signature
     return [i for i in instructions]
@@ -193,9 +197,9 @@ def parse_bracket_map(raw, instructions):
 def parse(tokens):
     raw, one_char_instructions = parse_one_char(tokens)
     simple_ops_instructions, val_diffs = parse_simple_ops(raw, one_char_instructions)
-    multiply_instructions = parse_multiply(raw, simple_ops_instructions, val_diffs)
-    bracket_map = parse_bracket_map(raw, multiply_instructions)
-    metadata = (multiply_instructions, val_diffs, bracket_map)
+    nest_instructions = parse_nests(raw, simple_ops_instructions, val_diffs)
+    bracket_map = parse_bracket_map(raw, nest_instructions)
+    metadata = (nest_instructions, val_diffs, bracket_map)
     return (raw, metadata)
 
 
@@ -212,7 +216,7 @@ def main(argv):
     print "bracket_map:", bracket_map
     instruction_one_char = 0
     instruction_simple_ops = 0
-    instruction_multiply = 0
+    instruction_nest = 0
     print "instructions:"
     i = 0
     while i < len(instructions):
@@ -228,11 +232,15 @@ def main(argv):
             vds = val_diffs[vds_begin:vds_end]
             print "\t%s %d:%d" % (prg, begin, end), vds, dpos
         elif kind == instruction.KIND_NEST_MULTIPLY:
-            instruction_multiply += 1
+            instruction_nest += 1
+            i = rng[1] - 1
+            print "\t%s %d:%d %s" % (prg, begin, end, str(rng))
+        elif kind == instruction.KIND_NEST_LOOP:
+            instruction_nest += 1
             i = rng[1] - 1
             print "\t%s %d:%d %s" % (prg, begin, end, str(rng))
         i += 1
-    print "ONE_CHAR: %d, SIMPLE_OPS: %d, MULTIPLY: %d" % (instruction_one_char, instruction_simple_ops, instruction_multiply)
+    print "ONE_CHAR: %d, SIMPLE_OPS: %d, NEST: %d" % (instruction_one_char, instruction_simple_ops, instruction_nest)
     return 0
 
 
