@@ -4,6 +4,8 @@ marp: true
 
 # bf-pypy 最適化内容
 
+commit: [`53754ee`](https://github.com/H1rono/bf-pypy/tree/53754ee427383636a770512c572ca34d685bfe82)
+
 ---
 
 ## 最適化2種類
@@ -46,6 +48,8 @@ marp: true
 - `ポインタの移動量`
     `dpos: int`
 
+実装: [`bf/parse.py:49`](https://github.com/H1rono/bf-pypy/blob/53754ee427383636a770512c572ca34d685bfe82/bf/parse.py#L49), [`bf/run.py:85`](https://github.com/H1rono/bf-pypy/blob/53754ee427383636a770512c572ca34d685bfe82/bf/run.py#L85)
+
 ---
 
 ## 掛け算への簡略化
@@ -86,7 +90,7 @@ after   -n +2*n +3*n +3*n +1*n    * 1
 ptr       0 -4 -3 -9
 --------------------
 outer    -n +n
-inner@1     -m -m -m
+inner@1     -m -m +m
 inner@2     -l +l
 ```
 
@@ -100,7 +104,28 @@ inner@2     -l +l
 
 - 内部処理開始時のポインタ位置 と 終了時のポインタ位置 が変化しない
     → ループの「軸」が定まっている
-- 内部処理にあるループ同士が「衝突」しない
+- 内部処理にあるループ同士が「干渉」しない
+
+実装: [`bf/parse.py:131`](https://github.com/H1rono/bf-pypy/blob/53754ee427383636a770512c572ca34d685bfe82/bf/parse.py#L131), [`bf/run.py:92`](https://github.com/H1rono/bf-pypy/blob/53754ee427383636a770512c572ca34d685bfe82/bf/run.py#L92)
+
+---
+
+## 変更結果
+
+1文字のみの処理がI/Oのみに
+
+```python
+def instruction_one_char(program, instr, machine):
+    _rng, _dpos, pc_rng = instr
+    code = program_in(program, pc_rng)
+    # assert code not in IO_OPS
+    if code == WRITE:
+        machine.write()
+    elif code == READ:
+        machine.read()
+```
+
+[`bf/run.py:58-65`](https://github.com/H1rono/bf-pypy/blob/53754ee427383636a770512c572ca34d685bfe82/bf/run.py#L58-L65)
 
 ---
 
