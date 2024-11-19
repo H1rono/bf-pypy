@@ -100,19 +100,20 @@ def mainloop(program, metadata, machine):
             machine.tape.accept_val_diffs_multiplied(vds, mul_by)
             machine.tape.advance_by(dpos)
         elif kind == KIND_ONE_CHAR:
-            instr = (rng, dpos, pc_rng)
-            i = instruction_one_char(i, program, instr, bracket_map, machine)
+            # instr = (rng, dpos, pc_rng)
+            i = instruction_one_char(i, program, (rng, dpos, pc_rng), bracket_map, machine)
         else: # kind in [KIND_NEST_MULTIPLY, KIND_NEST_LOOP]
             nests.append((nest_rng, mul_by))
             nest_rng = rng
             mul_by = machine.tape.get()
-            if kind == KIND_NEST_LOOP:
-                mul_by = min(1, mul_by)
+            assert mul_by >= 0
+            if kind == KIND_NEST_LOOP and mul_by != 0:
+                mul_by = 1
             if mul_by == 0:
                 i = r_uint(nest_rng[1] - 1)
         i += 1
-        if i >= nest_rng[1] and nests: # getting nest loop out
-            if machine.tape.get() == 0:
+        while i >= nest_rng[1] and nests: # getting nest loop out
+            if machine.tape.get() == 0 or mul_by == 0:
                 nest_rng, mul_by = nests.pop()
             else:
                 i = nest_rng[0]
