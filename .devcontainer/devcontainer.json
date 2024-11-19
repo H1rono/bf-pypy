@@ -14,7 +14,14 @@
         "ghcr.io/devcontainers/features/git:1": {
             "version": "latest",
             "ppa": "false"
-        }
+        },
+        "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
+            "packages": "chromium,build-essential,graphviz,fonts-noto-extra,fonts-noto-mono,fonts-noto-cjk-extra,fonts-noto-color-emoji"
+        },
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "lts",
+            "installYarnUsingApt": "true"
+        },
     },
     // Configure tool-specific properties.
     "customizations": {
@@ -43,7 +50,7 @@
     // "postCreateCommand": "pip3 install --user -r requirements.txt",
     // Set `remoteUser` to `root` to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
     "remoteUser": "vscode",
-    "postCreateCommand": "sudo chmod +rx /opt/pypy/lib",
+    "postCreateCommand": "${containerWorkspaceFolder}/.devcontainer/post-create.sh",
     "containerEnv": {
         "PYPY_USESSION_DIR": "${containerWorkspaceFolder}/tmp/usession"
     }
